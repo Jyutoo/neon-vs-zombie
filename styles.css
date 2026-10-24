@@ -242,7 +242,8 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .footer-hints span + span::before { content: ""; position: absolute; left: -8px; top: 4px; width: 2px; height: 2px; border-radius: 50%; background: #9fac92; }
 
 body.home-open { overflow: hidden; }
-body.home-open #app { visibility: hidden; }
+body.home-open #app > .game-layout,
+body.home-open #app > .home-footer { visibility: hidden; pointer-events: none; }
 .home-screen {
   position: fixed; inset: 0; z-index: 80; overflow-x: hidden; overflow-y: auto; padding: 22px 0 28px;
   background:
@@ -257,6 +258,9 @@ body.home-open #app { visibility: hidden; }
 .orb-two { width: 360px; height: 360px; left: -130px; bottom: -150px; background: radial-gradient(circle, rgba(170,211,134,.28), transparent 68%); }
 .home-shell { position: relative; z-index: 1; width: min(1480px, calc(100% - 40px)); margin: 0 auto; }
 .home-header { min-height: 108px; border-radius: 30px; padding: 15px 20px 15px 22px; display: flex; align-items: center; gap: 22px; }
+.home-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.back-to-menu { text-decoration: none; display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border: 1px solid rgba(103,137,88,.22); border-radius: 12px; background: rgba(255,255,255,.56); color: #4a6b42; font-size: 12px; font-weight: 800; transition: .18s; }
+.back-to-menu:hover { background: #fff; color: #2f643d; transform: translateY(-1px); }
 .home-brand { display: flex; align-items: center; gap: 14px; min-width: 330px; }
 .home-brand .brand-badge { width: 76px; height: 76px; border-radius: 24px; }
 .home-brand .brand-badge img { width: 70px; height: 70px; }
@@ -431,7 +435,7 @@ body.home-open #app { visibility: hidden; }
   .home-header { flex-wrap: wrap; gap: 12px; }
   .home-brand { min-width: 0; }
   .wallet-card { order: 3; flex: 1 1 100%; margin-left: 0; min-width: 0; }
-  .ghost-button { margin-left: auto; }
+  .home-actions { margin-left: auto; }
   .home-main { grid-template-columns: 1fr; }
   .level-preview { grid-template-columns: 1fr; }
   .preview-action { padding-left: 0; padding-top: 14px; border-left: 0; border-top: 1px dashed #d9e2cb; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }

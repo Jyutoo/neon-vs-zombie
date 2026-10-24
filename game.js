@@ -655,12 +655,17 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
   lastResult = null;
   const waves = levelWaves(level);
   const queue = buildQueue(waves);
+  const startCustard = Math.max(150, progress.custard);
+  if (startCustard > progress.custard) {
+    progress.custard = startCustard;
+    saveProgress();
+  }
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
     levelIndex: level,
     waves,
     scaling: levelScaling(level),
-    time: 0, custard: 150, speed: 1,
+    time: 0, custard: startCustard, speed: 1,
     plants: [], zombies: [], projectiles: [], enemyProjectiles: [], custards: [], babies: [],
     selected: null, queue, spawned: 0, kills: 0,
     collected: 0, placed: 0, wave: -1, naturalTimer: 5,
@@ -731,6 +736,10 @@ function hideHome() {
 }
 
 function leaveToHome() {
+  if (game.state === 'running') {
+    progress.custard = game.custard;
+    saveProgress();
+  }
   resetGame(false);
   sound('select');
   setTimeout(() => {
@@ -1503,15 +1512,13 @@ function finishGame(won) {
   const level = game.levelIndex;
   const firstClear = won && level === progress.highestCleared + 1;
   const reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
-  if (won) {
-    progress.custard += reward;
-    if (firstClear) {
-      progress.highestCleared = level;
-      progress.selectedLevel = level + 1;
-      checkCharacterUnlocks();
-    }
-    saveProgress();
+  progress.custard = game.custard + reward;
+  if (won && firstClear) {
+    progress.highestCleared = level;
+    progress.selectedLevel = level + 1;
+    checkCharacterUnlocks();
   }
+  saveProgress();
   renderHome();
   lastResult = {
     won, level, reward, firstClear, custard: progress.custard,
@@ -1526,16 +1533,16 @@ function showResult(result) {
   const title = won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
   const copy = won
     ? firstClear
-      ? `首次通关第 ${level} 关，奶黄已经到账，第 ${level + 1} 关正式解锁。`
-      : `再次守住第 ${level} 关，重复挑战获得首通奖励的 30%。`
-    : `第 ${level} 关防守失败。失败不扣奶黄，调整阵容再来一次。`;
-  const rewardBox = won
+      ? `首次通关第 ${level} 关，获得额外奶黄奖励，第 ${level + 1} 关正式解锁。`
+      : `再次守住第 ${level} 关，重复通关获得 30% 额外奖励。`
+    : `第 ${level} 关防守失败，剩余奶黄已保留。调整阵容再来一次。`;
+  const rewardBox = reward > 0
     ? `<div class="result-reward">
         <svg><use href="#i-coin"></use></svg>
-        <div><strong>+${reward}</strong><span>${firstClear ? '首通奖励' : '重复通关 · 30% 奖励'}</span></div>
+        <div><strong>+${reward}</strong><span>${firstClear ? '首通额外奖励' : '重复通关奖励 · 30%'}</span></div>
         <small>奶黄余额 ${result.custard}</small>
       </div>`
-    : '<div class="result-reward muted"><span>本局没有奶黄奖励 · 失败不扣奶黄</span></div>';
+    : `<div class="result-reward muted"><span>剩余奶黄已保留 · 余额 ${result.custard}</span></div>`;
   const actions = won
     ? `<div class="result-actions">
         <button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>
@@ -1759,7 +1766,7 @@ function requestHome() {
   pauseBabyPerformances();
   updatePauseButton();
   showModal(`
-    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>本局进度不会保留，奶黄与通关记录不受影响。</p>
+    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>当前剩余奶黄将带回主页，通关奖励不再发放。</p>
     <div class="result-actions"><button class="secondary-button" id="leaveCancel">继续守护</button><button class="danger-button" id="leaveConfirm">返回主页</button></div>`, 'compact');
   $('leaveCancel').addEventListener('click', resumeGame);
   $('leaveConfirm').addEventListener('click', leaveToHome);
