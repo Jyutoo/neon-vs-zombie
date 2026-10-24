@@ -7,30 +7,30 @@ const ROWS = 5;
 const COLS = 9;
 
 const TYPES = {
-  egg: { name: '奶蛋', role: '奶黄生产', cost: 60, hp: 160, cooldown: 4, rate: 12, produce: 20, description: '每隔 12 秒生成 20 奶黄，需要更谨慎地规划阵容。' },
-  rat: { name: '奶鼠', role: '远程投石', cost: 120, hp: 190, cooldown: 4, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的僵尸丢石头，稳定单体输出。' },
-  snake: { name: '奶蛇', role: '毒液持续伤害', cost: 90, hp: 160, cooldown: 6, rate: 1.7, damage: 16, range: Infinity, projectile: 'glob', description: '喷出毒液，命中后造成 4 秒持续毒伤。' },
-  dragon: { name: '奶龙', role: '范围火焰', cost: 210, hp: 280, cooldown: 10, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近僵尸造成范围伤害。' },
-  rabbit: { name: '奶兔', role: '群体治疗', cost: 90, hp: 170, cooldown: 8, rate: 3, description: '每 3 秒治疗自身及周围八格的奶家人 24 点耐久。' },
-  tiger: { name: '奶虎', role: '近战爆发', cost: 180, hp: 330, cooldown: 8, rate: .85, damage: 75, range: 100, description: '近距离猛击僵尸，出手快、单次伤害高。' },
-  ox: { name: '奶牛', role: '高耐久防线', cost: 90, hp: 900, cooldown: 10, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住僵尸并近身顶撞。' },
-  monkey: { name: '奶猴', role: '双目标攻击', cost: 150, hp: 200, cooldown: 7, rate: 1.4, damage: 24, range: Infinity, projectile: 'seed', description: '灵活投掷果核，每次同时攻击本行两个目标。' },
-  goat: { name: '奶羊', role: '击退控制', cost: 150, hp: 250, cooldown: 8, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退僵尸，争取更多输出时间。' },
-  horse: { name: '奶马', role: '冲锋突击', cost: 180, hp: 250, cooldown: 9, rate: 3.4, damage: 65, range: 310, description: '向远处僵尸发起冲锋，造成高伤害并将其撞退。' },
-  rooster: { name: '奶鸡', role: '攻速增益', cost: 120, hp: 180, cooldown: 9, rate: 0, description: '晨鸣助威，使本行其他奶家人的攻击速度提高 25%。' },
-  pig: { name: '奶猪', role: '奶黄寻宝', cost: 150, hp: 280, cooldown: 8, rate: 13, produce: 25, description: '每 13 秒拱出 25 奶黄，耐久比奶蛋更高。' },
-  dog: { name: '奶狗', role: '减速守卫', cost: 120, hp: 260, cooldown: 7, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行僵尸减速；僵尸靠近时会直接撕咬。' }
+  egg: { name: '奶蛋', role: '奶黄生产', cost: 60, hp: 160, cooldown: 5, rate: 12, produce: 20, description: '每隔 12 秒生成 20 奶黄，需要更谨慎地规划阵容。' },
+  rat: { name: '奶鼠', role: '远程投石', cost: 120, hp: 190, cooldown: 5, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的僵尸丢石头，稳定单体输出。' },
+  snake: { name: '奶蛇', role: '毒液持续伤害', cost: 90, hp: 160, cooldown: 7, rate: 1.7, damage: 16, range: Infinity, projectile: 'glob', description: '喷出毒液，命中后造成 4 秒持续毒伤。' },
+  dragon: { name: '奶龙', role: '范围火焰', cost: 210, hp: 280, cooldown: 11, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近僵尸造成范围伤害。' },
+  rabbit: { name: '奶兔', role: '群体治疗', cost: 90, hp: 170, cooldown: 9, rate: 3, description: '每 3 秒治疗自身及周围八格的奶家人 24 点耐久。' },
+  tiger: { name: '奶虎', role: '近战爆发', cost: 180, hp: 330, cooldown: 9, rate: .85, damage: 75, range: 100, description: '近距离猛击僵尸，出手快、单次伤害高。' },
+  ox: { name: '奶牛', role: '高耐久防线', cost: 90, hp: 900, cooldown: 11, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住僵尸并近身顶撞。' },
+  monkey: { name: '奶猴', role: '双目标攻击', cost: 150, hp: 200, cooldown: 8, rate: 1.4, damage: 24, range: Infinity, projectile: 'seed', description: '灵活投掷果核，每次同时攻击本行两个目标。' },
+  goat: { name: '奶羊', role: '击退控制', cost: 150, hp: 250, cooldown: 9, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退僵尸，击退后僵尸会获得短暂抗性。' },
+  horse: { name: '奶马', role: '冲锋突击', cost: 180, hp: 250, cooldown: 10, rate: 3.4, damage: 65, range: 310, description: '向远处僵尸发起冲锋，造成高伤害并将其撞退，击退后有抗性窗口。' },
+  rooster: { name: '奶鸡', role: '攻速增益', cost: 120, hp: 180, cooldown: 10, rate: 0, description: '晨鸣助威，使本行其他奶家人的攻击速度提高 25%。' },
+  pig: { name: '奶猪', role: '奶黄寻宝', cost: 150, hp: 280, cooldown: 9, rate: 13, produce: 25, description: '每 13 秒拱出 25 奶黄，耐久比奶蛋更高。' },
+  dog: { name: '奶狗', role: '减速守卫', cost: 120, hp: 260, cooldown: 8, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行僵尸减速；僵尸靠近时会直接撕咬。' }
 };
 
 const ZOMBIES = {
-  basic: { name: '普通僵尸', hp: 190, speed: 12, bite: 24 },
-  cone: { name: '路障僵尸', hp: 325, speed: 12, bite: 27 },
-  bucket: { name: '铁桶僵尸', hp: 525, speed: 10, bite: 31 },
-  runner: { name: '快速僵尸', hp: 155, speed: 18, bite: 22 },
-  brute: { name: '大块头僵尸', hp: 1100, speed: 6, bite: 60 },
-  spitter: { name: '远程僵尸', hp: 260, speed: 9, bite: 24, range: 340, rate: 2.8, damage: 35 },
-  jumper: { name: '跳跃僵尸', hp: 190, speed: 22, bite: 26 },
-  boss: { name: '僵尸王', hp: 4200, speed: 4.2, bite: 70 }
+  basic: { name: '普通僵尸', hp: 190, speed: 11, bite: 24 },
+  cone: { name: '路障僵尸', hp: 325, speed: 11, bite: 27 },
+  bucket: { name: '铁桶僵尸', hp: 525, speed: 9, bite: 31 },
+  runner: { name: '快速僵尸', hp: 155, speed: 16, bite: 22 },
+  brute: { name: '大块头僵尸', hp: 1100, speed: 5.5, bite: 60 },
+  spitter: { name: '远程僵尸', hp: 260, speed: 8, bite: 24, range: 340, rate: 2.8, damage: 35 },
+  jumper: { name: '跳跃僵尸', hp: 190, speed: 20, bite: 26 },
+  boss: { name: '僵尸王', hp: 4200, speed: 3.8, bite: 70 }
 };
 
 const LEVEL = [
@@ -276,7 +276,8 @@ function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = fa
     speed: config.speed, bite: config.bite,
     biteTimer: .4, attackTimer: .8, eating: false,
     poisonUntil: 0, poisonTick: 0, slowUntil: 0,
-    jumped: false, skillCount: 0, nextSkill: game.time + 5, enraged: false
+    jumped: false, skillCount: 0, nextSkill: game.time + 5, enraged: false,
+    knockbackProtected: false, knockbackGraceUntil: 0
   });
   game.spawned++;
   if (summoned) game.total++;
@@ -415,19 +416,27 @@ function updatePlants(dt) {
           poison: plant.type === 'snake', splash: plant.type === 'dragon'
         });
       }
-      sound(type.projectile === 'fire' ? 'fire' : 'throw');
+      sound(plant.type === 'snake' ? 'snake' : plant.type === 'monkey' ? 'monkey' : type.projectile === 'fire' ? 'fire' : 'throw');
     } else if (plant.type === 'tiger') {
       damageZombie(target, type.damage);
       spawnEffect('', target.x, target.y, 'slash-effect');
+      sound('tiger');
       sound('hit');
     } else if (plant.type === 'ox' || plant.type === 'goat' || plant.type === 'horse') {
       damageZombie(target, type.damage);
-      if (plant.type === 'goat') target.x += 65;
-      if (plant.type === 'horse') {
-        target.x += 48;
-        spawnEffect('', (plant.x + target.x) / 2, plant.y, 'charge-effect', Math.max(80, target.x - plant.x));
+      const canKnock = plant.type !== 'ox' && !target.eating && !target.knockbackProtected && game.time >= target.knockbackGraceUntil;
+      if (canKnock) {
+        target.x += plant.type === 'goat' ? 65 : 48;
+        target.knockbackProtected = true;
+        target.knockbackGraceUntil = game.time + 4;
+        if (plant.type === 'horse') {
+          spawnEffect('', (plant.x + target.x) / 2, plant.y, 'charge-effect', Math.max(80, target.x - plant.x));
+        }
+        spawnEffect(plant.type === 'horse' ? '冲锋！' : '嘿！', target.x, target.y - 35, 'combat-text');
+      } else {
+        spawnEffect(plant.type === 'horse' ? '突刺！' : '顶！', target.x, target.y - 35, 'combat-text');
       }
-      spawnEffect(plant.type === 'horse' ? '冲锋！' : '嘿！', target.x, target.y - 35, 'combat-text');
+      sound(plant.type === 'goat' ? 'goat' : plant.type === 'horse' ? 'horse' : 'ox');
       sound('hit');
     }
     plant.timer += attackRate(plant, type.rate);
@@ -521,6 +530,14 @@ function updateBossSkill(zombie) {
   zombie.nextSkill = game.time + (zombie.enraged ? 4.2 : 7);
 }
 
+function moveZombie(zombie, distance) {
+  const nextX = zombie.x - distance;
+  const blocker = game.plants
+    .filter(plant => plant.row === zombie.row && zombie.x > plant.x + 22 && nextX < plant.x + 23)
+    .sort((a, b) => b.x - a.x)[0];
+  zombie.x = blocker ? blocker.x + 23 : nextX;
+}
+
 function updateZombies(dt) {
   for (const zombie of [...game.zombies]) {
     if (zombie.poisonUntil > game.time && game.time >= zombie.poisonTick) {
@@ -560,12 +577,15 @@ function updateZombies(dt) {
           spawnEffect('重击！', blocker.x, blocker.y - 40, 'combat-text damage');
         }
         sound('bite');
-        if (!game.plants.includes(blocker)) zombie.eating = false;
+        if (!game.plants.includes(blocker)) {
+          zombie.eating = false;
+          zombie.knockbackProtected = false;
+        }
       }
     } else {
       const slowed = zombie.slowUntil > game.time;
       const enraged = zombie.type === 'boss' && zombie.enraged ? 1.45 : 1;
-      zombie.x -= zombie.speed * (slowed ? .55 : 1) * enraged * dt;
+      moveZombie(zombie, zombie.speed * (slowed ? .55 : 1) * enraged * dt);
     }
     const baby = game.babies[zombie.row];
     if (zombie.x < 122 && baby && !baby.used) triggerBaby(zombie.row, true);
@@ -601,7 +621,7 @@ function playBabyVideo(video) {
 function startBabyPerformance(row) {
   const container = document.createElement('div');
   container.className = 'baby-performance';
-  container.style.left = pctX(500);
+  container.style.left = pctX(70);
   container.style.top = pctY(Math.max(108, Math.min(BOARD_H - 108, yForRow(row))));
   const video = document.createElement('video');
   video.src = 'assets/baby-laugh.mp4';
@@ -944,6 +964,12 @@ function sound(name) {
     produce: () => tone(520, .12, 'sine', .012),
     throw: () => tone(240, .06, 'triangle', .009),
     fire: () => tone(120, .18, 'sawtooth', .015),
+    snake: () => { tone(310, .06, 'sawtooth', .011); tone(180, .1, 'triangle', .008, .045); },
+    monkey: () => { tone(700, .035, 'triangle', .008); tone(900, .045, 'triangle', .007, .055); },
+    tiger: () => { tone(190, .07, 'sawtooth', .012); tone(120, .1, 'triangle', .01, .05); },
+    ox: () => { tone(112, .17, 'sawtooth', .012); tone(82, .2, 'triangle', .01, .09); },
+    goat: () => { tone(500, .06, 'square', .008); tone(410, .09, 'square', .009, .07); },
+    horse: () => { tone(250, .08, 'sawtooth', .011); tone(370, .12, 'triangle', .009, .07); },
     impact: () => tone(110, .045, 'square', .007),
     hit: () => tone(95, .09, 'triangle', .018),
     bite: () => tone(85, .06, 'sawtooth', .006),

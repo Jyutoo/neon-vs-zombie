@@ -175,7 +175,7 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .baby-button:hover::after { opacity: 1; }
 .baby-button.laughing { animation: babyLaugh .16s ease-in-out 5 alternate; }
 .baby-button.used { opacity: 0; transform: translate(-50%,-50%) scale(.4) rotate(20deg); transition: .45s ease; }
-.baby-performance { position: absolute; width: 14%; aspect-ratio: 296 / 460; transform: translate(-50%,-50%); border-radius: 18px; background: #fff; border: 3px solid #fff7b8; box-shadow: 0 12px 35px rgba(70,57,20,.32), 0 0 0 5px rgba(255,218,75,.2); overflow: hidden; animation: babyPerformanceIn .35s ease-out; }
+.baby-performance { position: absolute; width: 12.5%; aspect-ratio: 296 / 460; transform: translate(-50%,-50%); border-radius: 16px; background: #fff; border: 3px solid #fff7b8; box-shadow: 0 10px 28px rgba(70,57,20,.3), 0 0 0 5px rgba(255,218,75,.18); overflow: hidden; animation: babyPerformanceIn .35s ease-out; }
 .baby-performance video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .baby-performance::after { content: "捧腹大笑"; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); padding: 3px 9px; border-radius: 999px; color: #765013; background: rgba(255,246,180,.92); font-size: 10px; font-weight: 900; white-space: nowrap; }
 .projectile { position: absolute; width: 2.5%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; }
