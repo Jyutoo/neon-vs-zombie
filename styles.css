@@ -199,6 +199,10 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .baby-button::after { content: "点击大笑"; position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); white-space: nowrap; padding: 2px 5px; border-radius: 6px; font-size: 8px; color: #735f24; background: rgba(255,248,189,.85); opacity: 0; transition: opacity .2s; }
 .baby-button:hover::after { opacity: 1; }
 .baby-button.performing { visibility: hidden; }
+.baby-button.cooling { opacity: 0.5; filter: grayscale(0.5); }
+.baby-button.cooling::after { content: "休息中"; opacity: 1; background: rgba(200,200,180,.85); }
+.shield-track { position: absolute; left: 10%; right: 10%; bottom: -3px; height: 3px; background: rgba(0,0,0,.2); border-radius: 2px; overflow: hidden; }
+.shield-fill { height: 100%; background: linear-gradient(90deg, #7ec8e3, #58a6c7); border-radius: 2px; transition: width .3s; }
 .baby-performance { position: absolute; width: 9%; height: 19%; transform: translate(-50%,-50%); pointer-events: none; background: transparent; }
 .baby-performance canvas { position: absolute; left: 50%; top: 50%; width: auto; height: 100%; transform: translate(-50%,-50%); filter: drop-shadow(0 5px 3px rgba(65,65,30,.25)); }
 .baby-performance video { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

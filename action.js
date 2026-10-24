@@ -59,7 +59,41 @@
   const mode = params.get('mode') === 'endless' ? 'endless' : 'level';
   const levelParam = Math.max(1, Math.min(12, parseInt(params.get('level')) || 1));
 
+  function loadActionProgress() {
+    const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
+    try {
+      const raw = JSON.parse(localStorage.getItem(saveKey));
+      if (raw && typeof raw === 'object') return raw;
+    } catch {}
+    return { upgrades: {} };
+  }
+
+  function getUpgradeMultiplier(totalLevels, percentPerLevel) {
+    return 1 + (totalLevels * percentPerLevel / 100);
+  }
+
+  function applyModeBUpgrades() {
+    const progress = loadActionProgress();
+    const upgrades = progress.upgrades || {};
+    return {
+      autoHealPerSec: (upgrades.egg || 0) * 1,
+      skillCooldownMul: 1 - Math.min(0.7,
+        ((upgrades.rat || 0) + (upgrades.rabbit || 0) + (upgrades.rooster || 0)) * 0.1
+      ),
+      attackDamageMul: getUpgradeMultiplier(
+        (upgrades.ox || 0) + (upgrades.tiger || 0) + (upgrades.monkey || 0), 15
+      ),
+      dotDamageMul: getUpgradeMultiplier(
+        (upgrades.snake || 0) + (upgrades.dragon || 0), 20
+      ),
+      healOnKill: ((upgrades.horse || 0) + (upgrades.goat || 0)) * 2,
+      shieldHp: ((upgrades.dog || 0) + (upgrades.pig || 0)) * 30
+    };
+  }
+
   function createPlayer(mode) {
+    const upgradeEffects = applyModeBUpgrades();
+    const bonusHp = upgradeEffects.shieldHp;
     return {
       x: mode === 'level' ? DATA.level.startX : DATA.arena.endlessStartX,
       y: DATA.arena.groundY,
@@ -67,7 +101,8 @@
       facing: 1,
       onGround: true,
       jumps: 0,
-      hp: DATA.player.maxHp,
+      hp: DATA.player.maxHp + bonusHp,
+      maxHpBase: DATA.player.maxHp + bonusHp,
       coyote: 0,
       jumpBuffer: 0,
       action: null,
@@ -84,7 +119,12 @@
       dashReadyAt: 0,
       dashUntil: 0,
       dashIframesUntil: 0,
-      invulnUntil: 0
+      invulnUntil: 0,
+      autoHealPerSec: upgradeEffects.autoHealPerSec,
+      healOnKill: upgradeEffects.healOnKill,
+      persistentAttackDamageMul: upgradeEffects.attackDamageMul,
+      persistentDotDamageMul: upgradeEffects.dotDamageMul,
+      persistentSkillCooldownMul: upgradeEffects.skillCooldownMul
     };
   }
 
@@ -120,6 +160,14 @@
     stats: { ...DATA.player.baseStats },
     nextId: 1
   };
+
+  // Apply persistent upgrade multipliers to stats (stack multiplicatively with roguelike)
+  const p = state.player;
+  state.stats.maxHp = p.maxHpBase;
+  state.stats.attackDamageMul *= p.persistentAttackDamageMul;
+  state.stats.fireDamageMul *= p.persistentDotDamageMul;
+  state.stats.fireCooldownMul *= p.persistentSkillCooldownMul;
+  state.stats.dashCooldownMul *= p.persistentSkillCooldownMul;
 
   const keys = new Set();
   const playerEl = document.createElement('div');
@@ -235,6 +283,7 @@
       state.kills += 1;
       sound('death');
       if (state.stats.lifesteal > 0) healPlayer(state.stats.lifesteal);
+      if (state.player.healOnKill > 0) healPlayer(state.player.healOnKill);
       gainXp(enemy.cfg.xp);
     }
   }
@@ -597,7 +646,7 @@
     }
     if (boss.burnUntil > state.time && state.time >= boss.burnTick) {
       boss.burnTick += 1;
-      damageEnemy(boss, DATA.player.fire.burnDps, 0, 1);
+      damageEnemy(boss, DATA.player.fire.burnDps * state.player.persistentDotDamageMul, 0, 1);
       if (boss.hp <= 0) return;
     }
     if (!boss.phase2 && boss.hp <= boss.maxHp * DATA.boss.phase2At) {
@@ -713,7 +762,7 @@
     if (enemy.hp <= 0) { enemy.dying = Math.max(0, enemy.dying - dt); return; }
     if (enemy.burnUntil > state.time && state.time >= enemy.burnTick) {
       enemy.burnTick += 1;
-      damageEnemy(enemy, DATA.player.fire.burnDps, 0, 1);
+      damageEnemy(enemy, DATA.player.fire.burnDps * state.player.persistentDotDamageMul, 0, 1);
       if (enemy.hp <= 0) return;
     }
     if (enemy.hurt > 0) {
@@ -844,6 +893,14 @@
     state.stats = { ...DATA.player.baseStats };
 
     state.player = createPlayer(state.mode);
+
+    // Re-apply persistent upgrade multipliers to stats after reset
+    const rp = state.player;
+    state.stats.maxHp = rp.maxHpBase;
+    state.stats.attackDamageMul *= rp.persistentAttackDamageMul;
+    state.stats.fireDamageMul *= rp.persistentDotDamageMul;
+    state.stats.fireCooldownMul *= rp.persistentSkillCooldownMul;
+    state.stats.dashCooldownMul *= rp.persistentSkillCooldownMul;
 
     playerEl.classList.remove('hurt', 'invulnerable', 'flip');
     keys.clear();
@@ -1102,6 +1159,11 @@
       return;
     }
     updatePlayer(dt);
+    // Auto heal from egg upgrade
+    if (state.player.autoHealPerSec > 0 && state.status === 'playing') {
+      state.player.hp = Math.min(state.stats.maxHp,
+        state.player.hp + state.player.autoHealPerSec * dt);
+    }
     updatePlayerAction(dt);
     if (state.mode === 'level') updateLevelFlow();
     else updateEndless(dt);

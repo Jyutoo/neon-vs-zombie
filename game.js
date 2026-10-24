@@ -246,6 +246,28 @@ function difficultyLabel(level) {
   return '最终BOSS';
 }
 
+function getUpgradeMultiplier(totalLevels, percentPerLevel) {
+  return 1 + (totalLevels * percentPerLevel / 100);
+}
+
+function applyModeAUpgrades() {
+  const upgrades = progress.upgrades || {};
+  return {
+    babyUses: 1 + (upgrades.egg || 0),
+    babyDamageMul: getUpgradeMultiplier(
+      (upgrades.ox || 0) + (upgrades.tiger || 0) + (upgrades.monkey || 0), 15
+    ),
+    babyDotMul: getUpgradeMultiplier(
+      (upgrades.snake || 0) + (upgrades.dragon || 0), 20
+    ),
+    babyHealPerUse: ((upgrades.horse || 0) + (upgrades.goat || 0)) * 10,
+    babyShieldPerUse: ((upgrades.dog || 0) + (upgrades.pig || 0)) * 20,
+    babyCooldownMul: 1 - Math.min(0.7,
+      ((upgrades.rat || 0) + (upgrades.rabbit || 0) + (upgrades.rooster || 0)) * 0.1
+    )
+  };
+}
+
 const $ = id => document.getElementById(id);
 const layers = {
   plants: $('plantLayer'),
@@ -648,13 +670,14 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
   stopBabyPerformances();
   $('babyLayer').innerHTML = '';
   $('effectLayer').innerHTML = '';
+  const upgradeEffects = applyModeAUpgrades();
   for (let row = 0; row < ROWS; row++) {
-    const baby = { row, used: false, element: document.createElement('button') };
+    const baby = { row, usesLeft: upgradeEffects.babyUses, maxUses: upgradeEffects.babyUses, cooldownUntil: 0, element: document.createElement('button') };
     baby.element.className = 'baby-button';
     baby.element.style.left = pctX(62);
     baby.element.style.top = pctY(yForRow(row));
     baby.element.innerHTML = `<img src="assets/baby-glance.png" alt="第 ${row + 1} 行奶娃">`;
-    baby.element.title = '点击让奶娃捧腹大笑：击倒普通僵尸并重创大怪';
+    baby.element.title = `奶娃 (${baby.usesLeft}/${baby.maxUses} 次)`;
     baby.element.addEventListener('click', () => triggerBaby(row, false));
     $('babyLayer').appendChild(baby.element);
     game.babies.push(baby);
@@ -1109,6 +1132,15 @@ function updateEnemyProjectiles(dt) {
 
 function damagePlant(plant, amount) {
   if (!game.plants.includes(plant)) return;
+  // Shield absorbs damage first
+  if (plant.shield && plant.shield > 0) {
+    if (plant.shield >= amount) {
+      plant.shield -= amount;
+      return;
+    }
+    amount -= plant.shield;
+    plant.shield = 0;
+  }
   plant.hp -= amount;
   animateEntity('plants', plant.id, 'hurt', 180);
   if (plant.hp <= 0) removePlant(plant);
@@ -1193,7 +1225,7 @@ function updateZombies(dt) {
       const enraged = zombie.type === 'boss' && zombie.enraged ? 1.45 : 1;
       moveZombie(zombie, zombie.speed * (slowed ? .55 : 1) * enraged * dt);
     }
-    const babyRow = zombieLaneRows(zombie).find(row => game.babies[row] && !game.babies[row].used);
+    const babyRow = zombieLaneRows(zombie).find(row => game.babies[row] && game.babies[row].usesLeft > 0 && game.time >= game.babies[row].cooldownUntil);
     if (zombie.x < 122 && babyRow !== undefined) triggerBaby(babyRow, true);
     if (!zombie.dying && zombie.x < 20 && game.state === 'running') finishGame(false);
   }
@@ -1370,29 +1402,85 @@ function stopBabyPerformances() {
 function triggerBaby(row, automatic) {
   if (game.state !== 'running') return;
   const baby = game.babies[row];
-  if (!baby || baby.used) return;
+  if (!baby || baby.usesLeft <= 0) return;
+
+  const upgradeEffects = applyModeAUpgrades();
+
+  // Check cooldown
+  if (game.time < baby.cooldownUntil) {
+    if (!automatic) toast(`奶娃还在休息，${(baby.cooldownUntil - game.time).toFixed(1)}秒后可用`);
+    return;
+  }
+
   const targets = game.zombies.filter(zombie => !zombie.dying && zombieOccupiesRow(zombie, row));
   if (!targets.length) {
     if (!automatic) toast('这一行暂时没有僵尸，奶娃先保留体力');
     return;
   }
-  baby.used = true;
-  baby.element.classList.add('performing');
-  baby.element.disabled = true;
+
+  baby.usesLeft--;
+
+  // Update baby button state
+  baby.element.title = `奶娃 (${baby.usesLeft}/${baby.maxUses} 次)`;
+  if (baby.usesLeft > 0) {
+    // Set cooldown for next use
+    baby.cooldownUntil = game.time + 10 * upgradeEffects.babyCooldownMul;
+    baby.element.disabled = true;
+    baby.element.classList.add('cooling');
+    // Re-enable after cooldown
+    const cooldownEnd = baby.cooldownUntil;
+    const checkCooldown = () => {
+      if (game.time >= cooldownEnd && baby.usesLeft > 0) {
+        baby.element.disabled = false;
+        baby.element.classList.remove('cooling');
+      }
+    };
+    const intervalId = setInterval(() => {
+      checkCooldown();
+      if (game.time >= cooldownEnd || baby.usesLeft <= 0) clearInterval(intervalId);
+    }, 200);
+  } else {
+    baby.element.classList.add('performing');
+    baby.element.disabled = true;
+  }
+
   startBabyPerformance(row);
+
   const survivors = [];
   targets.forEach(zombie => {
-    const damage = LAUGH_DAMAGE[zombie.type];
-    if (damage) {
+    const baseDamage = LAUGH_DAMAGE[zombie.type];
+    if (baseDamage) {
+      const damage = Math.floor(baseDamage * upgradeEffects.babyDamageMul);
       damageZombie(zombie, damage);
       if (!zombie.dying) {
         survivors.push(zombie);
         spawnEffect(`-${damage}`, zombie.x, zombie.y - 40, 'combat-text damage');
       }
     } else {
-      damageZombie(zombie, zombie.hp + 9999);
+      const damage = Math.floor((zombie.hp + 9999) * upgradeEffects.babyDamageMul);
+      damageZombie(zombie, damage);
     }
   });
+
+  // Apply heal to same-row plants
+  if (upgradeEffects.babyHealPerUse > 0) {
+    game.plants.filter(p => p.row === row).forEach(plant => {
+      const healed = Math.min(plant.maxHp - plant.hp, upgradeEffects.babyHealPerUse);
+      if (healed > 0) {
+        plant.hp += healed;
+        spawnEffect(`+${healed}`, plant.x, plant.y - 25, 'combat-text heal');
+      }
+    });
+  }
+
+  // Apply shield to same-row plants
+  if (upgradeEffects.babyShieldPerUse > 0) {
+    game.plants.filter(p => p.row === row).forEach(plant => {
+      plant.shield = (plant.shield || 0) + upgradeEffects.babyShieldPerUse;
+      spawnEffect(`+${upgradeEffects.babyShieldPerUse}盾`, plant.x, plant.y - 45, 'combat-text heal');
+    });
+  }
+
   const prefix = automatic ? `第 ${row + 1} 行奶娃自动大笑` : `第 ${row + 1} 行奶娃捧腹大笑`;
   if (survivors.length) {
     const names = [...new Set(survivors.map(zombie => ZOMBIES[zombie.type].name))].join('、');
@@ -1509,10 +1597,19 @@ function render() {
   syncCollection('plants', game.plants, plant => {
     const element = document.createElement('div');
     element.className = `entity plant ${plant.type}`;
-    element.innerHTML = `<img src="assets/${plant.type}.png" alt="${TYPES[plant.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
+    element.innerHTML = `<img src="assets/${plant.type}.png" alt="${TYPES[plant.type].name}"><div class="health-track"><div class="health-fill"></div></div><div class="shield-track" style="display:none"><div class="shield-fill"></div></div>`;
     setEntityPosition(element, plant);
     return element;
-  }, (element, plant) => updateHealth(element, plant));
+  }, (element, plant) => {
+    updateHealth(element, plant);
+    const shieldTrack = element.querySelector('.shield-track');
+    if (plant.shield && plant.shield > 0) {
+      shieldTrack.style.display = '';
+      shieldTrack.querySelector('.shield-fill').style.width = `${Math.min(100, plant.shield / 100 * 100)}%`;
+    } else {
+      shieldTrack.style.display = 'none';
+    }
+  });
 
   syncCollection('zombies', game.zombies, zombie => {
     const element = document.createElement('div');
@@ -1694,7 +1791,7 @@ function showHelp() {
       <div><strong>关卡与奶黄</strong><br>每关有多波僵尸（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
       <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人通过通关对应关卡自动解锁（通关第 2 关解锁奶鼠，第 3 关解锁奶兔，依此类推）。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
-      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
+      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。升级后可多次使用，冷却后恢复。</div>
       <div><strong>僵尸王</strong><br>第 12 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
