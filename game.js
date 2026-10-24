@@ -36,14 +36,10 @@ const ZOMBIES = {
 const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
 const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitter: 850, jumper: 850, brute: 1050, boss: 1400 };
 
-const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const STARTING_UNITS = ProgressStore.STARTING_UNITS;
 const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster', 'pig', 'horse', 'dragon'];
-const CHARACTER_UNLOCK_LEVELS = {
-  rat: 2, rabbit: 3, dog: 4, tiger: 5,
-  goat: 6, rooster: 7, pig: 8, horse: 9, dragon: 10
-};
-const V1_SAVE_KEY = 'nailong-vs-zombies-progress-v1';
-const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
+const CHARACTER_UNLOCK_LEVELS = ProgressStore.CHARACTER_UNLOCK_LEVELS;
+const MAX_LEVEL = ProgressStore.MAX_LEVEL;
 function levelWaveCount(level) {
   if (level <= 3) return 5;
   if (level <= 6) return 6;
@@ -63,95 +59,16 @@ function levelWaveConfig(level) {
   return { starts, intervals };
 }
 
-function defaultProgress() {
-  return {
-    custard: 500,
-    highestCleared: 0,
-    actionHighestCleared: 0,
-    endlessBest: { wave: 0, kills: 0, date: null },
-    selectedLevel: 1,
-    unlocked: [...STARTING_UNITS],
-    upgrades: {
-      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
-      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
-      pig: 0, horse: 0, dog: 0
-    }
-  };
-}
-
-// migrateSaveV1ToV2 — also tested in tests/save-migration.test.js (keep in sync)
-function migrateSaveV1ToV2(v1Data) {
-  if (!v1Data || typeof v1Data !== 'object') v1Data = {};
-  const coins = Math.max(0, Math.floor(Number(v1Data.coins) || 0));
-  const totalEarned = Math.max(coins, Math.floor(Number(v1Data.totalEarned) || 0));
-  const highestCleared = Math.max(0, Math.floor(Number(v1Data.highestCleared) || 0));
-  const validUnits = Object.keys(TYPES);
-  const rawUnlocked = Array.isArray(v1Data.unlocked) ? v1Data.unlocked : [];
-  const unlocked = [...new Set(rawUnlocked.filter(k => validUnits.includes(k)))];
-  STARTING_UNITS.forEach(k => { if (!unlocked.includes(k)) unlocked.push(k); });
-  return {
-    custard: coins,
-    highestCleared,
-    actionHighestCleared: 0,
-    endlessBest: { wave: 0, kills: 0, date: null },
-    selectedLevel: Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(v1Data.selectedLevel) || 1))),
-    unlocked,
-    upgrades: {
-      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
-      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
-      pig: 0, horse: 0, dog: 0
-    }
-  };
-}
-
-function loadProgress() {
-  const fallback = defaultProgress();
-  // Try v2 first
-  try {
-    const raw2 = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (raw2 && typeof raw2 === 'object') {
-      // Validate and patch missing fields from defaults
-      const valid = Object.keys(TYPES);
-      const unlocked = [...new Set((Array.isArray(raw2.unlocked) ? raw2.unlocked : []).filter(key => valid.includes(key)))];
-      STARTING_UNITS.forEach(key => { if (!unlocked.includes(key)) unlocked.push(key); });
-      const highestCleared = Math.max(0, Math.floor(Number(raw2.highestCleared) || 0));
-      const custard = Math.max(0, Math.floor(Number(raw2.custard) || 0));
-      const actionHighestCleared = Math.max(0, Math.floor(Number(raw2.actionHighestCleared) || 0));
-      const endlessBest = (raw2.endlessBest && typeof raw2.endlessBest === 'object')
-        ? { wave: Math.max(0, Math.floor(Number(raw2.endlessBest.wave) || 0)), kills: Math.max(0, Math.floor(Number(raw2.endlessBest.kills) || 0)), date: raw2.endlessBest.date || null }
-        : { wave: 0, kills: 0, date: null };
-      const upgrades = (raw2.upgrades && typeof raw2.upgrades === 'object') ? { ...fallback.upgrades, ...raw2.upgrades } : { ...fallback.upgrades };
-      const selectedLevel = Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(raw2.selectedLevel) || 1)));
-      return { custard, highestCleared, actionHighestCleared, endlessBest, selectedLevel, unlocked, upgrades };
-    }
-  } catch {}
-  // Try v1 → migrate
-  try {
-    const raw1 = JSON.parse(localStorage.getItem(V1_SAVE_KEY));
-    if (raw1 && typeof raw1 === 'object') {
-      const migrated = migrateSaveV1ToV2(raw1);
-      try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(migrated));
-        localStorage.removeItem(V1_SAVE_KEY);
-      } catch {}
-      return migrated;
-    }
-  } catch {}
-  return fallback;
-}
-
 function saveProgress() {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
-  } catch {}
+  ProgressStore.save(progress);
 }
 
-let progress = loadProgress();
+let progress = ProgressStore.load();
 let homeTrackStart = 1;
 let lastResult = null;
 
 function isUnlocked(key) {
-  return progress.unlocked.includes(key);
+  return ProgressStore.isCharacterUnlocked(key, progress);
 }
 
 function checkCharacterUnlocks() {
@@ -701,8 +618,13 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
 
 function startLevel(level) {
   const target = Math.max(1, Math.floor(Number(level) || 1));
+  if (target > MAX_LEVEL) {
+    toast(`第 ${MAX_LEVEL} 关就是最终关，可以重复挑战`);
+    sound('deny');
+    return;
+  }
   if (target > progress.highestCleared + 1) {
-    toast(`先通关第 ${progress.highestCleared + 1} 关才能继续`);
+    toast(`先通关第 ${nextChallengeLevel()} 关才能继续`);
     sound('deny');
     return;
   }
@@ -748,16 +670,19 @@ function leaveToHome() {
 }
 
 function maxDisplayLevel() {
-  return 12;
+  return MAX_LEVEL;
+}
+
+function nextChallengeLevel() {
+  return Math.min(MAX_LEVEL, progress.highestCleared + 1);
 }
 
 function renderHome() {
   $('homeCoins').textContent = progress.custard;
   $('homeCleared').textContent = progress.highestCleared;
-  $('homeCleared').textContent = progress.highestCleared;
   $('homeUnlocked').textContent = progress.unlocked.length;
   $('homeRosterCount').textContent = progress.unlocked.length;
-  $('homeNextLevel').textContent = progress.highestCleared + 1;
+  $('homeNextLevel').textContent = nextChallengeLevel();
   renderLevelTrack();
   renderLevelPreview();
   renderRoster();
@@ -778,7 +703,7 @@ function renderLevelTrack() {
     const current = level === progress.highestCleared + 1;
     const locked = level > progress.highestCleared + 1;
     const selected = level === progress.selectedLevel;
-    const boss = level === 12;
+    const boss = level === MAX_LEVEL;
     const reward = cleared ? repeatReward(level) : firstClearReward(level);
     const status = cleared
       ? '<span class="node-status"><svg><use href="#i-check"></use></svg>已通关</span>'
@@ -887,7 +812,7 @@ function showResetConfirm() {
     </div>`, 'compact');
   $('resetCancel').addEventListener('click', hideModal);
   $('resetConfirm').addEventListener('click', () => {
-    progress = defaultProgress();
+    progress = ProgressStore.defaultProgress();
     homeTrackStart = 1;
     saveProgress();
     hideModal();
@@ -1515,7 +1440,7 @@ function finishGame(won) {
   progress.custard = game.custard + reward;
   if (won && firstClear) {
     progress.highestCleared = level;
-    progress.selectedLevel = level + 1;
+    progress.selectedLevel = Math.min(MAX_LEVEL, level + 1);
     checkCharacterUnlocks();
   }
   saveProgress();
@@ -1530,12 +1455,15 @@ function finishGame(won) {
 function showResult(result) {
   if (!result) { showHome(); return; }
   const { won, level, reward, firstClear } = result;
-  const title = won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
-  const copy = won
-    ? firstClear
-      ? `首次通关第 ${level} 关，获得额外奶黄奖励，第 ${level + 1} 关正式解锁。`
-      : `再次守住第 ${level} 关，重复通关获得 30% 额外奖励。`
-    : `第 ${level} 关防守失败，剩余奶黄已保留。调整阵容再来一次。`;
+  const isFinal = won && level === MAX_LEVEL;
+  const title = isFinal ? '全部关卡通关！' : won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
+  const copy = isFinal
+    ? `你守住了全部 ${MAX_LEVEL} 关，包括僵尸王镇守的最终决战。随时可以重复挑战任意关卡刷奶黄。`
+    : won
+      ? firstClear
+        ? `首次通关第 ${level} 关，获得额外奶黄奖励，第 ${level + 1} 关正式解锁。`
+        : `再次守住第 ${level} 关，重复通关获得 30% 额外奖励。`
+      : `第 ${level} 关防守失败，剩余奶黄已保留。调整阵容再来一次。`;
   const rewardBox = reward > 0
     ? `<div class="result-reward">
         <svg><use href="#i-coin"></use></svg>
@@ -1545,8 +1473,8 @@ function showResult(result) {
     : `<div class="result-reward muted"><span>剩余奶黄已保留 · 余额 ${result.custard}</span></div>`;
   const actions = won
     ? `<div class="result-actions">
-        <button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>
-        <button class="secondary-button" id="resultRetry">重玩本关</button>
+        ${isFinal ? '' : '<button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>'}
+        <button class="${isFinal ? 'primary' : 'secondary'}-button" id="resultRetry">重玩本关</button>
         <button class="ghost-button" id="resultHome">返回主页</button>
       </div>`
     : `<div class="result-actions">
@@ -1968,3 +1896,28 @@ initGrid();
 initCards();
 resetGame(false);
 requestAnimationFrame(frame);
+
+window.__nailongTower = {
+  get progress() { return progress; },
+  set progress(value) { progress = value; },
+  game,
+  resetGame,
+  startLevel,
+  finishGame,
+  placeUnit,
+  spawnCustard,
+  collectCustard,
+  checkCharacterUnlocks,
+  levelWaveCount,
+  levelWaveConfig,
+  levelWaves,
+  levelScaling,
+  enemyTypesForLevel,
+  firstClearReward,
+  repeatReward,
+  difficultyLabel,
+  getUpgradeMultiplier,
+  applyModeAUpgrades,
+  isUnlocked,
+  saveProgress
+};

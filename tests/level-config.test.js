@@ -1,231 +1,241 @@
+'use strict';
 /**
- * Tests for the 12-level configuration system.
+ * 模式A 的十二关卡配置：波次数量、出场排布、难度缩放、奖励与难度标签。
  *
- * These functions are defined in game.js (browser context).
- * To keep them testable in Node without a build step, we duplicate the pure
- * logic here and assert against it. Keep in sync with game.js.
+ * Issue #2 的测试覆盖缺口：本文件过去抄了 levelWaveCount / levelWaveConfig /
+ * levelScaling / firstClearReward / repeatReward / difficultyLabel 六份副本，
+ * game.js 改了它们也照样绿灯。现在每个断言都调用 `window.__nailongTower`
+ * 导出的同名生产函数（progress.js + game.js 未经修改地载入）。
  *
- * Run:  node tests/level-config.test.js
+ * Run:  node --test tests/level-config.test.js
  */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const ProgressStore = require('../progress.js');
+const { boot, createStorage } = require('./helpers/browser-env');
 
-// ── Functions under test (must match game.js) ────────────────────────────────
+const V2 = ProgressStore.SAVE_KEY;
+const MAX_LEVEL = ProgressStore.MAX_LEVEL;
+const LEVELS = Array.from({ length: MAX_LEVEL }, (_, i) => i + 1);
 
-function levelWaveCount(level) {
-  if (level <= 3) return 5;
-  if (level <= 6) return 6;
-  if (level <= 9) return 7;
-  if (level <= 11) return 8;
-  return 10; // level 12
+// 关卡配置函数是纯函数，但只在浏览器脚本里定义，所以先加载真实页面再取句柄。
+function tower(save = createStorage()) {
+  const env = boot({ files: ['progress.js', 'game.js'], save });
+  const api = env.global.__nailongTower;
+  api.game.sound = false;
+  return { env, api };
 }
 
-function levelWaveConfig(level) {
-  const count = levelWaveCount(level);
-  const starts = [];
-  const intervals = [];
-  for (let i = 0; i < count; i++) {
-    starts.push(12 + i * 36);
-    intervals.push(Math.max(4, 8 - i * 0.4));
-  }
-  return { starts, intervals };
+function toastText(env) {
+  const node = env.nodes.get('toast');
+  return node ? node.textContent : '';
 }
 
-function levelScaling(level) {
-  return {
-    hp: Math.pow(1.15, level - 1),
-    speed: Math.min(1.35, 1 + (level - 1) * .025),
-    bite: Math.min(1.8, 1 + Math.max(0, level - 3) * .035)
-  };
-}
+// ── levelWaveCount ───────────────────────────────────────────────────────────
 
-function firstClearReward(level) {
-  return 50 + (level - 1) * 15;
-}
-
-function repeatReward(level) {
-  return Math.max(10, Math.floor(firstClearReward(level) * .3));
-}
-
-function difficultyLabel(level) {
-  if (level === 12) return 'BOSS 关';
-  if (level <= 3) return '入门';
-  if (level <= 6) return '进阶';
-  if (level <= 9) return '中级';
-  if (level <= 11) return '高级';
-  return '最终BOSS';
-}
-
-// ── levelWaveCount tests ─────────────────────────────────────────────────────
-
-test('levelWaveCount: levels 1-3 have 5 waves', () => {
-  assert.equal(levelWaveCount(1), 5);
-  assert.equal(levelWaveCount(2), 5);
-  assert.equal(levelWaveCount(3), 5);
+test('levelWaveCount: 第 1-3 关 5 波', () => {
+  const { api } = tower();
+  for (const level of [1, 2, 3]) assert.equal(api.levelWaveCount(level), 5);
 });
 
-test('levelWaveCount: levels 4-6 have 6 waves', () => {
-  assert.equal(levelWaveCount(4), 6);
-  assert.equal(levelWaveCount(5), 6);
-  assert.equal(levelWaveCount(6), 6);
+test('levelWaveCount: 第 4-6 关 6 波', () => {
+  const { api } = tower();
+  for (const level of [4, 5, 6]) assert.equal(api.levelWaveCount(level), 6);
 });
 
-test('levelWaveCount: levels 7-9 have 7 waves', () => {
-  assert.equal(levelWaveCount(7), 7);
-  assert.equal(levelWaveCount(8), 7);
-  assert.equal(levelWaveCount(9), 7);
+test('levelWaveCount: 第 7-9 关 7 波', () => {
+  const { api } = tower();
+  for (const level of [7, 8, 9]) assert.equal(api.levelWaveCount(level), 7);
 });
 
-test('levelWaveCount: levels 10-11 have 8 waves', () => {
-  assert.equal(levelWaveCount(10), 8);
-  assert.equal(levelWaveCount(11), 8);
+test('levelWaveCount: 第 10-11 关 8 波', () => {
+  const { api } = tower();
+  for (const level of [10, 11]) assert.equal(api.levelWaveCount(level), 8);
 });
 
-test('levelWaveCount: level 12 has 10 waves', () => {
-  assert.equal(levelWaveCount(12), 10);
+test('levelWaveCount: 第 12 关 10 波', () => {
+  const { api } = tower();
+  assert.equal(api.levelWaveCount(12), 10);
 });
 
-// ── levelWaveConfig tests ────────────────────────────────────────────────────
+// ── levelWaveConfig ──────────────────────────────────────────────────────────
 
-test('levelWaveConfig: returns correct number of starts and intervals', () => {
-  for (let level = 1; level <= 12; level++) {
-    const config = levelWaveConfig(level);
-    const expected = levelWaveCount(level);
-    assert.equal(config.starts.length, expected, `level ${level} starts count`);
-    assert.equal(config.intervals.length, expected, `level ${level} intervals count`);
+test('levelWaveConfig: starts 与 intervals 的长度等于波次数', () => {
+  const { api } = tower();
+  for (const level of LEVELS) {
+    const config = api.levelWaveConfig(level);
+    const expected = api.levelWaveCount(level);
+    assert.equal(config.starts.length, expected, `第 ${level} 关 starts 数量`);
+    assert.equal(config.intervals.length, expected, `第 ${level} 关 intervals 数量`);
   }
 });
 
-test('levelWaveConfig: starts are staggered at 36-second intervals', () => {
-  const config = levelWaveConfig(1);
-  assert.equal(config.starts[0], 12);
-  assert.equal(config.starts[1], 48);
-  assert.equal(config.starts[2], 84);
-  assert.equal(config.starts[3], 120);
-  assert.equal(config.starts[4], 156);
+test('levelWaveConfig: 首波 12 秒出场，之后每 36 秒一波', () => {
+  const { api } = tower();
+  // 展开一次：VM 里创建的数组与测试脚本不同 realm，严格深比较会因原型不同而失败。
+  const config = api.levelWaveConfig(1);
+  assert.deepEqual([...config.starts], [12, 48, 84, 120, 156]);
 });
 
-test('levelWaveConfig: intervals decrease but stay >= 4', () => {
-  const config = levelWaveConfig(12);
+test('levelWaveConfig: 波间隔递减但下限 4 秒', () => {
+  const { api } = tower();
+  const config = api.levelWaveConfig(12);
   assert.equal(config.intervals[0], 8);
-  // All intervals should be >= 4
   for (const interval of config.intervals) {
-    assert.ok(interval >= 4, `interval ${interval} should be >= 4`);
+    assert.ok(interval >= 4, `interval ${interval} 应 >= 4`);
   }
 });
 
-// ── levelScaling tests ───────────────────────────────────────────────────────
+// ── levelScaling ─────────────────────────────────────────────────────────────
 
-test('levelScaling: level 1 has base scaling', () => {
-  const s = levelScaling(1);
-  assert.equal(s.hp, 1);
-  assert.equal(s.speed, 1);
-  assert.equal(s.bite, 1);
+test('levelScaling: 第 1 关是基准值', () => {
+  const { api } = tower();
+  const scaling = api.levelScaling(1);
+  assert.equal(scaling.hp, 1);
+  assert.equal(scaling.speed, 1);
+  assert.equal(scaling.bite, 1);
 });
 
-test('levelScaling: hp scales as 1.15^(level-1)', () => {
-  assert.ok(Math.abs(levelScaling(2).hp - 1.15) < 0.001);
-  assert.ok(Math.abs(levelScaling(5).hp - Math.pow(1.15, 4)) < 0.001);
-  assert.ok(Math.abs(levelScaling(12).hp - Math.pow(1.15, 11)) < 0.001);
+test('levelScaling: 血量按每关 ×1.15 增长', () => {
+  const { api } = tower();
+  assert.ok(Math.abs(api.levelScaling(2).hp - 1.15) < 0.001);
+  assert.ok(Math.abs(api.levelScaling(3).hp - 1.3225) < 0.001);
+  assert.ok(Math.abs(api.levelScaling(5).hp - 1.749) < 0.001);
+  assert.ok(Math.abs(api.levelScaling(12).hp - 4.6524) < 0.001);
 });
 
-test('levelScaling: speed caps at 1.35', () => {
-  // Level 12: 1 + 11*0.025 = 1.275 (not yet capped)
-  const s12 = levelScaling(12);
-  assert.ok(Math.abs(s12.speed - 1.275) < 0.001);
-  // Cap reached at level 15: 1 + 14*0.025 = 1.35
-  const s15 = levelScaling(15);
-  assert.equal(s15.speed, 1.35);
-  // Beyond cap stays at 1.35
-  const s20 = levelScaling(20);
-  assert.equal(s20.speed, 1.35);
+test('levelScaling: 速度封顶 1.35', () => {
+  const { api } = tower();
+  assert.ok(Math.abs(api.levelScaling(12).speed - 1.275) < 0.001);
+  assert.equal(api.levelScaling(15).speed, 1.35);
+  assert.equal(api.levelScaling(20).speed, 1.35);
 });
 
-test('levelScaling: bite caps at 1.8', () => {
-  // Level 12: 1 + max(0, 9)*0.035 = 1.315 (not yet capped)
-  const s12 = levelScaling(12);
-  assert.ok(Math.abs(s12.bite - 1.315) < 0.001);
-  // Cap reached at level 27+: 1 + 24*0.035 = 1.84 → capped to 1.8
-  const s30 = levelScaling(30);
-  assert.equal(s30.bite, 1.8);
+test('levelScaling: 啃咬封顶 1.8', () => {
+  const { api } = tower();
+  assert.ok(Math.abs(api.levelScaling(12).bite - 1.315) < 0.001);
+  assert.equal(api.levelScaling(30).bite, 1.8);
 });
 
-// ── Boss logic tests ─────────────────────────────────────────────────────────
+// ── Boss 出场 ────────────────────────────────────────────────────────────────
 
-test('boss: only appears on level 12', () => {
-  // Boss should NOT appear on levels 1-11
-  for (let level = 1; level <= 11; level++) {
-    assert.notEqual(level, 12, `level ${level} should not have boss`);
+test('僵尸王只出现在第 12 关的最后一波', () => {
+  const { api } = tower();
+  for (const level of LEVELS.filter(level => level < 12)) {
+    const waves = api.levelWaves(level);
+    assert.equal(waves.some(wave => wave.types.includes('boss')), false,
+      `第 ${level} 关不应刷僵尸王（含曾经的第 5/10 关）`);
+    assert.equal(api.enemyTypesForLevel(level).includes('boss'), false);
   }
-  // The actual boss check in levelWaves is: level === 12 && waveIndex === waveCount - 1
-  // We verify the condition logic here
-  const hasBoss = (level) => level === 12;
-  assert.equal(hasBoss(5), false, 'level 5 should not have boss (was old boss level)');
-  assert.equal(hasBoss(10), false, 'level 10 should not have boss (was old boss level)');
-  assert.equal(hasBoss(12), true, 'level 12 should have boss');
+  const finalWaves = api.levelWaves(12);
+  assert.equal(finalWaves.slice(0, -1).some(wave => wave.types.includes('boss')), false,
+    '最终关的前几波也不该提前刷僵尸王');
+  assert.ok(finalWaves[finalWaves.length - 1].types.includes('boss'), '最终关末波必须刷僵尸王');
+  assert.ok(api.enemyTypesForLevel(12).includes('boss'));
 });
 
-// ── firstClearReward tests ───────────────────────────────────────────────────
-
-test('firstClearReward: level 1 gives 50', () => {
-  assert.equal(firstClearReward(1), 50);
-});
-
-test('firstClearReward: level 12 gives 215', () => {
-  assert.equal(firstClearReward(12), 215);
-});
-
-test('firstClearReward: linear progression 50 + (level-1)*15', () => {
-  for (let level = 1; level <= 12; level++) {
-    assert.equal(firstClearReward(level), 50 + (level - 1) * 15);
+test('levelWaves 的出场时间与间隔取自 levelWaveConfig', () => {
+  const { api } = tower();
+  for (const level of LEVELS) {
+    const waves = api.levelWaves(level);
+    const config = api.levelWaveConfig(level);
+    assert.equal(waves.length, config.starts.length, `第 ${level} 关波次数量`);
+    waves.forEach((wave, index) => {
+      assert.equal(wave.start, config.starts[index], `第 ${level} 关第 ${index + 1} 波出场时间`);
+      assert.equal(wave.interval, config.intervals[index], `第 ${level} 关第 ${index + 1} 波间隔`);
+      assert.ok(wave.types.length > 0, `第 ${level} 关第 ${index + 1} 波必须有敌人`);
+    });
   }
 });
 
-test('repeatReward: 30% of firstClear, minimum 10', () => {
-  assert.equal(repeatReward(1), Math.max(10, Math.floor(50 * 0.3))); // 15
-  assert.equal(repeatReward(12), Math.max(10, Math.floor(215 * 0.3))); // 64
-  // All repeat rewards should be >= 10
-  for (let level = 1; level <= 12; level++) {
-    assert.ok(repeatReward(level) >= 10, `level ${level} repeat reward should be >= 10`);
+// ── 奖励 ─────────────────────────────────────────────────────────────────────
+
+test('firstClearReward: 第 1 关 50 奶黄', () => {
+  const { api } = tower();
+  assert.equal(api.firstClearReward(1), 50);
+});
+
+test('firstClearReward: 第 12 关 215 奶黄', () => {
+  const { api } = tower();
+  assert.equal(api.firstClearReward(12), 215);
+});
+
+test('firstClearReward: 每关线性 +15', () => {
+  const { api } = tower();
+  assert.deepEqual(LEVELS.map(level => api.firstClearReward(level)),
+    [50, 65, 80, 95, 110, 125, 140, 155, 170, 185, 200, 215]);
+});
+
+test('repeatReward: 首通奖励的三成，最低 10 奶黄', () => {
+  const { api } = tower();
+  assert.equal(api.repeatReward(1), 15);
+  assert.equal(api.repeatReward(2), 19);
+  assert.equal(api.repeatReward(12), 64);
+  for (const level of LEVELS) {
+    assert.ok(api.repeatReward(level) >= 10, `第 ${level} 关重复奖励应 >= 10`);
+    assert.ok(api.repeatReward(level) < api.firstClearReward(level), '重复奖励必须低于首通奖励');
   }
 });
 
-// ── difficultyLabel tests ────────────────────────────────────────────────────
+// ── difficultyLabel ──────────────────────────────────────────────────────────
 
-test('difficultyLabel: level 12 is BOSS 关', () => {
-  assert.equal(difficultyLabel(12), 'BOSS 关');
+test('difficultyLabel: 第 12 关是 BOSS 关', () => {
+  const { api } = tower();
+  assert.equal(api.difficultyLabel(12), 'BOSS 关');
 });
 
-test('difficultyLabel: levels 1-3 are 入门', () => {
-  assert.equal(difficultyLabel(1), '入门');
-  assert.equal(difficultyLabel(2), '入门');
-  assert.equal(difficultyLabel(3), '入门');
+test('difficultyLabel: 第 1-3 关是入门', () => {
+  const { api } = tower();
+  for (const level of [1, 2, 3]) assert.equal(api.difficultyLabel(level), '入门');
 });
 
-test('difficultyLabel: levels 4-6 are 进阶', () => {
-  assert.equal(difficultyLabel(4), '进阶');
-  assert.equal(difficultyLabel(5), '进阶');
-  assert.equal(difficultyLabel(6), '进阶');
+test('difficultyLabel: 第 4-6 关是进阶', () => {
+  const { api } = tower();
+  for (const level of [4, 5, 6]) assert.equal(api.difficultyLabel(level), '进阶');
 });
 
-test('difficultyLabel: levels 7-9 are 中级', () => {
-  assert.equal(difficultyLabel(7), '中级');
-  assert.equal(difficultyLabel(8), '中级');
-  assert.equal(difficultyLabel(9), '中级');
+test('difficultyLabel: 第 7-9 关是中级', () => {
+  const { api } = tower();
+  for (const level of [7, 8, 9]) assert.equal(api.difficultyLabel(level), '中级');
 });
 
-test('difficultyLabel: levels 10-11 are 高级', () => {
-  assert.equal(difficultyLabel(10), '高级');
-  assert.equal(difficultyLabel(11), '高级');
+test('difficultyLabel: 第 10-11 关是高级', () => {
+  const { api } = tower();
+  for (const level of [10, 11]) assert.equal(api.difficultyLabel(level), '高级');
 });
 
-// ── maxDisplayLevel test ─────────────────────────────────────────────────────
-
-test('maxDisplayLevel: should be fixed at 12', () => {
-  // The function should return 12 regardless of progress
-  function maxDisplayLevel() {
-    return 12;
+test('difficultyLabel: 十二关的标签都落在已定义的档位里', () => {
+  const { api } = tower();
+  const known = new Set(['入门', '进阶', '中级', '高级', 'BOSS 关']);
+  for (const level of LEVELS) {
+    assert.ok(known.has(api.difficultyLabel(level)), `第 ${level} 关标签未知`);
   }
-  assert.equal(maxDisplayLevel(), 12);
+  // '最终BOSS' 是生产代码里到不了的兜底分支：第 12 关先命中 'BOSS 关'。
+  assert.equal(LEVELS.some(level => api.difficultyLabel(level) === '最终BOSS'), false);
+});
+
+// ── 关卡上限 ─────────────────────────────────────────────────────────────────
+
+test('关卡轨道封顶 12 关，页面不会接受第 13 关', () => {
+  assert.equal(MAX_LEVEL, 12);
+  const save = createStorage({
+    [V2]: JSON.stringify({ custard: 900, highestCleared: 12, selectedLevel: 12 })
+  });
+  const { env, api } = tower(save);
+
+  // 关卡轨道只渲染封顶以内的关卡。
+  const rendered = [...env.nodes.get('levelTrack').innerHTML.matchAll(/data-level="(\d+)"/g)]
+    .map(match => Number(match[1]));
+  assert.ok(rendered.length > 0, '关卡轨道没有渲染出任何关卡');
+  for (const level of rendered) {
+    assert.ok(level >= 1 && level <= MAX_LEVEL, `轨道渲染出越界的第 ${level} 关`);
+  }
+
+  api.startLevel(12);
+  assert.equal(api.game.levelIndex, 12);
+  api.startLevel(13);
+  assert.equal(api.game.levelIndex, 12, '第 13 关绝不能开局');
+  assert.match(toastText(env), /第 12 关就是最终关/);
+  assert.equal(api.progress.selectedLevel, MAX_LEVEL);
 });

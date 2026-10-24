@@ -1,8 +1,7 @@
 /* upgrade.js — Upgrade system logic */
 
-const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
 const UPGRADE_COSTS = [100, 200, 400, 800, 1600, 3200, 6400];
-const MAX_UPGRADE_LEVEL = 7;
+const MAX_UPGRADE_LEVEL = ProgressStore.MAX_UPGRADE_LEVEL;
 
 const CHARACTER_UPGRADES = {
   egg:     { name: '奶蛋', modeA: '+使用次数',   modeB: '+自动回复',   perLevel: { modeA: '+1次',    modeB: '+1HP/秒' } },
@@ -20,38 +19,24 @@ const CHARACTER_UPGRADES = {
   dog:     { name: '奶狗', modeA: '+同行盾牌',   modeB: '+盾牌',       perLevel: { modeA: '+20HP',   modeB: '+30HP' } }
 };
 
-const CHARACTER_UNLOCK_LEVELS = {
-  rat: 2, rabbit: 3, dog: 4, tiger: 5,
-  goat: 6, rooster: 7, pig: 8, horse: 9, dragon: 10
-};
+const CHARACTER_UNLOCK_LEVELS = ProgressStore.CHARACTER_UNLOCK_LEVELS;
 
-const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const STARTING_UNITS = ProgressStore.STARTING_UNITS;
 
 function loadProgress() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (!raw) return null;
-    return raw;
-  } catch {
-    return null;
-  }
+  return ProgressStore.load();
 }
 
 function saveProgress(progress) {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
-  } catch {}
+  ProgressStore.save(progress);
 }
 
 function isUnlocked(key, progress) {
-  if (STARTING_UNITS.includes(key)) return true;
-  const requiredLevel = CHARACTER_UNLOCK_LEVELS[key];
-  return requiredLevel && progress.highestCleared >= requiredLevel;
+  return ProgressStore.isCharacterUnlocked(key, progress);
 }
 
 function renderUpgradeCards() {
   const progress = loadProgress();
-  if (!progress) return;
 
   const grid = document.getElementById('upgradeGrid');
   const custardEl = document.getElementById('custardBalance');

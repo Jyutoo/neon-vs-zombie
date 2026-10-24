@@ -2,25 +2,13 @@
   const modals = Array.from(document.querySelectorAll('.modal'));
   const bestEls = Array.from(document.querySelectorAll('[data-best-wave]'));
   const custardEls = Array.from(document.querySelectorAll('[data-custard-balance]'));
-  const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
 
   function readBest() {
-    try {
-      const save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-      if (save && save.endlessBest && save.endlessBest.wave > 0) return save.endlessBest;
-      // Fallback: try legacy key
-      return JSON.parse(localStorage.getItem('nailong.action.endlessBest') || 'null');
-    } catch {
-      return null;
-    }
+    return ProgressStore.load().endlessBest;
   }
 
   function readCustard() {
-    try {
-      const save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-      if (save && typeof save.custard === 'number') return save.custard;
-    } catch {}
-    return null;
+    return ProgressStore.load().custard;
   }
 
   function renderBest() {
@@ -31,9 +19,7 @@
 
   function renderCustard() {
     const custard = readCustard();
-    if (custard !== null) {
-      custardEls.forEach(el => { el.textContent = custard; });
-    }
+    custardEls.forEach(el => { el.textContent = custard; });
   }
 
   function open(id) {

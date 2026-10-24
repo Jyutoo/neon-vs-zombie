@@ -3,7 +3,7 @@
     arena: { width: 1280, height: 720, groundY: 560, minX: 60, maxX: 1220, endlessStartX: 240 },
     progression: { xpBase: 30, xpStep: 20, upgradeCount: 3 },
     level: {
-      worldWidth: 5120,
+      maxLevel: 12,
       screenWidth: 1280,
       startX: 200,
       edgeMargin: 70,
@@ -12,12 +12,22 @@
       rightMargin: 80,
       batchDelay: 1.2,
       spawnInterval: 0.6,
+      // Combat screens for level 1. levelConfig() grows them and appends the
+      // boss screen, so each of the twelve levels fights differently.
       screens: [
         { batches: [['basic', 'basic', 'basic'], ['basic', 'cone', 'cone']] },
         { batches: [['cone', 'cone', 'runner', 'runner'], ['basic', 'bucket'], ['elite', 'basic', 'basic']] },
-        { batches: [['cone', 'cone', 'bucket', 'bucket'], ['runner', 'runner', 'basic', 'basic'], ['elite', 'cone', 'cone']] },
-        { boss: true }
-      ]
+        { batches: [['cone', 'cone', 'bucket', 'bucket'], ['runner', 'runner', 'basic', 'basic'], ['elite', 'cone', 'cone']] }
+      ],
+      progression: {
+        hpPerLevel: 0.1,
+        dmgPerLevel: 0.05,
+        speedPerLevel: 0.02,
+        maxSpeedMul: 1.35,
+        bossHpPerLevel: 0.15,
+        extraScreenEvery: 4,
+        extraEnemyEvery: 4
+      }
     },
     player: {
       maxHp: 100,
@@ -105,9 +115,7 @@
       healRatio: 0.15,
       bossHpGrowth: 0.3,
       scaling: { hp: 0.08, dmg: 0.05, speed: 0.02, maxSpeedMul: 1.4 }
-    },
-    storageKeys: { endlessBest: 'nailong.action.endlessBest' },
-    saveKey: 'nailong-vs-zombies-progress-v2'
+    }
   };
 
   if (typeof module === 'object' && module.exports) module.exports = ACTION_DATA;

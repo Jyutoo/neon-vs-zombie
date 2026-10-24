@@ -1,227 +1,197 @@
+'use strict';
 /**
- * Tests for v1 → v2 save migration.
+ * v1 → v2 存档迁移。
  *
- * The migrateSaveV1ToV2 function is defined in game.js (browser context).
- * To keep it testable in Node without a build step, we duplicate the pure
- * logic here and assert against it.  A comment in game.js cross-references
- * this test file so future maintainers keep both copies in sync.
+ * Issue #2 的测试覆盖缺口：本文件过去把 game.js 里的 migrateSaveV1ToV2 /
+ * loadProgress 抄了一份进来，生产代码删掉这两个函数后它还在测自己。
+ * 现在全部改为驱动真实实现：纯迁移语义走 `require('../progress.js')`
+ * （UMD，Node 直接可用），页面消费存档走 `boot()` 加载未经修改的
+ * progress.js + game.js。
  *
- * Run:  node tests/save-migration.test.js
+ * Run:  node --test tests/save-migration.test.js
  */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const ProgressStore = require('../progress.js');
+const { boot, createStorage } = require('./helpers/browser-env');
 
-// ── Constants (must match game.js) ──────────────────────────────────────────
-const V1_KEY = 'nailong-vs-zombies-progress-v1';
-const V2_KEY = 'nailong-vs-zombies-progress-v2';
-const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const V1 = ProgressStore.V1_SAVE_KEY;
+const V2 = ProgressStore.SAVE_KEY;
 
-// ── Migration function (must be identical to the one in game.js) ────────────
-function migrateSaveV1ToV2(v1Data) {
-  if (!v1Data || typeof v1Data !== 'object') v1Data = {};
-  const coins = Math.max(0, Math.floor(Number(v1Data.coins) || 0));
-  const totalEarned = Math.max(coins, Math.floor(Number(v1Data.totalEarned) || 0));
-  const highestCleared = Math.max(0, Math.floor(Number(v1Data.highestCleared) || 0));
-  const validUnits = [
-    'egg','rat','snake','dragon','rabbit','tiger','ox','monkey',
-    'goat','rooster','pig','horse','dog'
-  ];
-  const rawUnlocked = Array.isArray(v1Data.unlocked) ? v1Data.unlocked : [];
-  const unlocked = [...new Set(rawUnlocked.filter(k => validUnits.includes(k)))];
-  STARTING_UNITS.forEach(k => { if (!unlocked.includes(k)) unlocked.push(k); });
-  return {
-    custard: coins,
-    highestCleared,
-    actionHighestCleared: 0,
-    endlessBest: { wave: 0, kills: 0, date: null },
-    selectedLevel: Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(v1Data.selectedLevel) || 1))),
-    unlocked,
-    upgrades: {
-      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
-      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
-      pig: 0, horse: 0, dog: 0
-    }
-  };
+// 驱动真实塔防页面：progress.js 先于 game.js 加载，与 game.html 一致。
+function bootTower(save) {
+  const env = boot({ files: ['progress.js', 'game.js'], save });
+  const api = env.global.__nailongTower;
+  api.game.sound = false;
+  return { env, api };
 }
 
-function defaultProgress() {
-  return {
-    custard: 500,
-    highestCleared: 0,
-    actionHighestCleared: 0,
-    endlessBest: { wave: 0, kills: 0, date: null },
-    selectedLevel: 1,
-    unlocked: [...STARTING_UNITS],
-    upgrades: {
-      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
-      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
-      pig: 0, horse: 0, dog: 0
-    }
-  };
+function readStoredV2(storage) {
+  const raw = storage.getItem(V2);
+  assert.ok(raw !== null, 'v2 存档应当已经落盘');
+  return JSON.parse(raw);
 }
 
-// ── Mock localStorage ───────────────────────────────────────────────────────
-function createMockStorage() {
-  const store = {};
-  return {
-    getItem(key) { return store[key] ?? null; },
-    setItem(key, value) { store[key] = String(value); },
-    removeItem(key) { delete store[key]; },
-    clear() { for (const k in store) delete store[k]; },
-    _store: store
-  };
-}
+// ── migrateV1：字段换算 ──────────────────────────────────────────────────────
 
-// Simulates loadProgress with migration logic (mirrors game.js implementation)
-function loadProgressWithMigration(storage) {
-  const fallback = defaultProgress();
-
-  // Try v2 first
-  try {
-    const raw2 = JSON.parse(storage.getItem(V2_KEY));
-    if (raw2 && typeof raw2 === 'object') return raw2;
-  } catch {}
-
-  // Try v1 → migrate
-  try {
-    const raw1 = JSON.parse(storage.getItem(V1_KEY));
-    if (raw1 && typeof raw1 === 'object') {
-      const migrated = migrateSaveV1ToV2(raw1);
-      storage.setItem(V2_KEY, JSON.stringify(migrated));
-      storage.removeItem(V1_KEY);
-      return migrated;
-    }
-  } catch {}
-
-  return fallback;
-}
-
-// ── Tests ───────────────────────────────────────────────────────────────────
-
-test('migrateSaveV1ToV2 converts coins to custard 1:1', () => {
-  const v1 = { coins: 420, totalEarned: 1000, highestCleared: 5, unlocked: ['egg', 'snake', 'ox', 'monkey', 'rat'] };
-  const v2 = migrateSaveV1ToV2(v1);
+test('v1 的 coins 按 1:1 迁移成奶黄', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 420, totalEarned: 1000, highestCleared: 5,
+    unlocked: ['egg', 'snake', 'ox', 'monkey', 'rat']
+  });
   assert.equal(v2.custard, 420);
 });
 
-test('migrateSaveV1ToV2 preserves highestCleared', () => {
-  const v1 = { coins: 0, totalEarned: 0, highestCleared: 12, unlocked: ['egg'] };
-  const v2 = migrateSaveV1ToV2(v1);
+test('v1 的最高通关关卡原样保留', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 0, totalEarned: 0, highestCleared: 12, unlocked: ['egg']
+  });
   assert.equal(v2.highestCleared, 12);
 });
 
-test('migrateSaveV1ToV2 preserves unlocked units and ensures starting units', () => {
-  const v1 = { coins: 100, totalEarned: 200, highestCleared: 3, unlocked: ['rat', 'tiger'] };
-  const v2 = migrateSaveV1ToV2(v1);
+test('迁移保留 v1 已解锁角色并补齐四个初始角色', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 100, totalEarned: 200, highestCleared: 3, unlocked: ['rat', 'tiger']
+  });
   assert.ok(v2.unlocked.includes('rat'));
   assert.ok(v2.unlocked.includes('tiger'));
-  // Starting units must always be present
-  for (const unit of STARTING_UNITS) {
-    assert.ok(v2.unlocked.includes(unit), `Missing starting unit: ${unit}`);
+  for (const unit of ProgressStore.STARTING_UNITS) {
+    assert.ok(v2.unlocked.includes(unit), `缺少初始角色: ${unit}`);
   }
 });
 
-test('migrateSaveV1ToV2 filters invalid unit keys', () => {
-  const v1 = { coins: 0, totalEarned: 0, highestCleared: 0, unlocked: ['egg', 'invalidUnit', 'dragon'] };
-  const v2 = migrateSaveV1ToV2(v1);
-  assert.ok(!v2.unlocked.includes('invalidUnit'));
+test('迁移会过滤掉不存在的角色键', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 0, totalEarned: 0, highestCleared: 0,
+    unlocked: ['egg', 'invalidUnit', 'dragon']
+  });
+  assert.equal(v2.unlocked.includes('invalidUnit'), false);
   assert.ok(v2.unlocked.includes('egg'));
   assert.ok(v2.unlocked.includes('dragon'));
 });
 
-test('migrateSaveV1ToV2 initializes actionHighestCleared and endlessBest', () => {
-  const v1 = { coins: 0, totalEarned: 0, highestCleared: 0, unlocked: [] };
-  const v2 = migrateSaveV1ToV2(v1);
+test('迁移为模式B 字段写入初始值', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 0, totalEarned: 0, highestCleared: 0, unlocked: []
+  });
   assert.equal(v2.actionHighestCleared, 0);
   assert.deepEqual(v2.endlessBest, { wave: 0, kills: 0, date: null });
 });
 
-test('migrateSaveV1ToV2 initializes all upgrades to 0', () => {
-  const v1 = { coins: 50, totalEarned: 50, highestCleared: 1, unlocked: ['egg'] };
-  const v2 = migrateSaveV1ToV2(v1);
-  const expectedKeys = ['egg','rat','snake','dragon','rabbit','tiger','ox','monkey','goat','rooster','pig','horse','dog'];
-  for (const key of expectedKeys) {
-    assert.equal(v2.upgrades[key], 0, `Upgrade ${key} should be 0`);
+test('迁移把全部角色的强化等级置 0', () => {
+  const v2 = ProgressStore.migrateV1({
+    coins: 50, totalEarned: 50, highestCleared: 1, unlocked: ['egg']
+  });
+  assert.equal(Object.keys(v2.upgrades).length, ProgressStore.ALL_UNITS.length);
+  for (const key of ProgressStore.ALL_UNITS) {
+    assert.equal(v2.upgrades[key], 0, `强化 ${key} 应为 0`);
   }
 });
 
-test('migrateSaveV1ToV2 handles missing coins field gracefully', () => {
-  const v1 = { totalEarned: 100, highestCleared: 2, unlocked: ['egg'] };
-  const v2 = migrateSaveV1ToV2(v1);
+test('v1 缺少 coins 字段时奶黄为 0，totalEarned 不会当作钱包', () => {
+  const v2 = ProgressStore.migrateV1({ totalEarned: 100, highestCleared: 2, unlocked: ['egg'] });
   assert.equal(v2.custard, 0);
 });
 
-test('migrateSaveV1ToV2 handles null/undefined input gracefully', () => {
-  const v2null = migrateSaveV1ToV2(null);
-  assert.equal(v2null.custard, 0);
-  assert.equal(v2null.highestCleared, 0);
-
-  const v2undef = migrateSaveV1ToV2(undefined);
-  assert.equal(v2undef.custard, 0);
+test('null / undefined 输入迁移成安全的空档', () => {
+  for (const input of [null, undefined]) {
+    const v2 = ProgressStore.migrateV1(input);
+    assert.equal(v2.custard, 0);
+    assert.equal(v2.highestCleared, 0);
+    assert.deepEqual(v2.unlocked, ProgressStore.STARTING_UNITS);
+  }
 });
 
-test('loadProgressWithMigration migrates v1 to v2 and deletes v1 key', () => {
-  const storage = createMockStorage();
-  const v1Data = { coins: 300, totalEarned: 600, highestCleared: 7, unlocked: ['egg', 'snake', 'ox', 'monkey', 'dragon'] };
-  storage.setItem(V1_KEY, JSON.stringify(v1Data));
+// ── load()：读取、落盘与旧键清理 ─────────────────────────────────────────────
 
-  const result = loadProgressWithMigration(storage);
+test('load() 迁移 v1 后写入完整的 v2 存档并删除 v1 键', () => {
+  const storage = createStorage({
+    [V1]: JSON.stringify({
+      coins: 300, totalEarned: 600, highestCleared: 7,
+      unlocked: ['egg', 'snake', 'ox', 'monkey', 'dragon']
+    })
+  });
 
-  // Should have migrated data
+  const result = ProgressStore.load(storage);
+
   assert.equal(result.custard, 300);
   assert.equal(result.highestCleared, 7);
   assert.ok(result.unlocked.includes('dragon'));
-
-  // v2 key should now exist
-  assert.ok(storage.getItem(V2_KEY) !== null);
-  // v1 key should be deleted
-  assert.equal(storage.getItem(V1_KEY), null);
+  const stored = readStoredV2(storage);
+  assert.equal(stored.custard, 300);
+  for (const field of ['custard', 'highestCleared', 'actionHighestCleared',
+    'endlessBest', 'selectedLevel', 'unlocked', 'upgrades']) {
+    assert.ok(Object.prototype.hasOwnProperty.call(stored, field), `${field} 未落盘`);
+  }
+  assert.equal(storage.getItem(V1), null);
 });
 
-test('loadProgressWithMigration returns v2 data directly when available', () => {
-  const storage = createMockStorage();
-  const v2Data = defaultProgress();
-  v2Data.custard = 1200;
-  v2Data.highestCleared = 10;
-  storage.setItem(V2_KEY, JSON.stringify(v2Data));
-
-  const result = loadProgressWithMigration(storage);
+test('只有 v2 存档时按 v2 读数并补齐缺失字段', () => {
+  const storage = createStorage({
+    [V2]: JSON.stringify({ custard: 1200, highestCleared: 10 })
+  });
+  const result = ProgressStore.load(storage);
   assert.equal(result.custard, 1200);
   assert.equal(result.highestCleared, 10);
+  assert.deepEqual(result.unlocked, ProgressStore.STARTING_UNITS);
+  assert.equal(result.upgrades.egg, 0);
 });
 
-test('loadProgressWithMigration returns default when no save exists', () => {
-  const storage = createMockStorage();
-  const result = loadProgressWithMigration(storage);
-  const expected = defaultProgress();
+test('没有任何存档时回退到默认档', () => {
+  const result = ProgressStore.load(createStorage());
+  const expected = ProgressStore.defaultProgress();
   assert.equal(result.custard, expected.custard);
   assert.equal(result.highestCleared, expected.highestCleared);
   assert.deepEqual(result.unlocked, expected.unlocked);
   assert.deepEqual(result.endlessBest, expected.endlessBest);
 });
 
-test('loadProgressWithMigration prefers v2 over v1 when both exist', () => {
-  const storage = createMockStorage();
-  const v1Data = { coins: 100, totalEarned: 100, highestCleared: 1, unlocked: ['egg'] };
-  const v2Data = defaultProgress();
-  v2Data.custard = 999;
-  storage.setItem(V1_KEY, JSON.stringify(v1Data));
-  storage.setItem(V2_KEY, JSON.stringify(v2Data));
+test('v1 与 v2 同时存在时以 v2 携带的字段为准', () => {
+  const storage = createStorage({
+    [V1]: JSON.stringify({ coins: 100, totalEarned: 100, highestCleared: 1, unlocked: ['egg'] }),
+    [V2]: JSON.stringify({ custard: 999, highestCleared: 4 })
+  });
 
-  const result = loadProgressWithMigration(storage);
-  // Should use v2 data (custard=999), not migrate v1 (coins=100)
+  const result = ProgressStore.load(storage);
+
+  // v2 的奶黄与通关数覆盖 v1 迁移值，v1 的角色记录仍保留。
   assert.equal(result.custard, 999);
-  // v1 key should still exist (no migration performed)
-  assert.ok(storage.getItem(V1_KEY) !== null);
+  assert.equal(result.highestCleared, 4);
+  // 生产实现只要读到过 v1 存档就会把它退休掉，无论这次是否需要迁移。
+  assert.equal(storage.getItem(V1), null);
 });
 
-test('defaultProgress has correct initial values', () => {
-  const dp = defaultProgress();
+test('defaultProgress() 给出正确的初始值', () => {
+  const dp = ProgressStore.defaultProgress();
   assert.equal(dp.custard, 500);
   assert.equal(dp.highestCleared, 0);
   assert.equal(dp.actionHighestCleared, 0);
   assert.deepEqual(dp.endlessBest, { wave: 0, kills: 0, date: null });
-  assert.deepEqual(dp.unlocked, STARTING_UNITS);
+  assert.deepEqual(dp.unlocked, ProgressStore.STARTING_UNITS);
   assert.equal(Object.keys(dp.upgrades).length, 13);
+});
+
+// ── 真实页面如何消费迁移结果 ─────────────────────────────────────────────────
+
+test('损坏的 v1 存档让塔防页面回退到初始 500 奶黄', () => {
+  const { api } = bootTower(createStorage({ [V1]: '{ "coins": 300, ' }));
+  assert.equal(api.progress.custard, 500);
+  assert.equal(api.progress.highestCleared, 0);
+});
+
+test('迁移来的角色在塔防页面直接可用，未达标角色仍锁定', () => {
+  const storage = createStorage({
+    [V1]: JSON.stringify({
+      coins: 200, totalEarned: 400, highestCleared: 1,
+      unlocked: ['egg', 'snake', 'ox', 'monkey', 'dragon']
+    })
+  });
+  const { api } = bootTower(storage);
+
+  assert.equal(api.progress.unlocked.includes('dragon'), true);
+  assert.equal(api.isUnlocked('dragon'), true, '拥有即解锁：奶黄时代买下的奶龙不能被重新锁上');
+  assert.equal(api.isUnlocked('rat'), false, '第 2 关门槛未到且未拥有');
+  assert.equal(api.isUnlocked('horse'), false);
+  assert.equal(api.isUnlocked('egg'), true);
 });

@@ -1,145 +1,162 @@
-// tests/unlock-logic.test.js
-// Tests for character unlock logic: level-clear-based unlocking
+'use strict';
+/**
+ * 模式A 角色解锁逻辑：按通关关卡解锁。
+ *
+ * Issue #2 的测试覆盖缺口：本文件过去自带一份 checkCharacterUnlocks(highestCleared,
+ * currentlyUnlocked) 的副本，加上手写 assert 计数器与打印，生产的 `game.js`
+ * 里同名函数（无参数、直接改写 progress、写中文名并落盘）坏了也测不出来。
+ * 现在改为 boot 真实塔防页面，调用 `window.__nailongTower.checkCharacterUnlocks()`，
+ * 再断言 progress / 落盘存档 / toast 文案。
+ *
+ * Run:  node --test tests/unlock-logic.test.js
+ */
 
-const CHARACTER_UNLOCK_LEVELS = {
-  rat: 2, rabbit: 3, dog: 4, tiger: 5,
-  goat: 6, rooster: 7, pig: 8, horse: 9, dragon: 10
-};
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const ProgressStore = require('../progress.js');
+const { boot, createStorage } = require('./helpers/browser-env');
 
-const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const V2 = ProgressStore.SAVE_KEY;
+const STARTING = ProgressStore.STARTING_UNITS;
+const GATES = ProgressStore.CHARACTER_UNLOCK_LEVELS;
 
-function checkCharacterUnlocks(highestCleared, currentlyUnlocked) {
-  const unlocked = [...currentlyUnlocked];
-  const newlyUnlocked = [];
-  for (const [char, level] of Object.entries(CHARACTER_UNLOCK_LEVELS)) {
-    if (highestCleared >= level && !unlocked.includes(char)) {
-      unlocked.push(char);
-      newlyUnlocked.push(char);
-    }
+// 把存档写进 localStorage 桩，再加载真实页面脚本，读取生产算出来的 progress。
+function towerWithProgress(overrides = {}) {
+  const stored = {
+    custard: 500,
+    highestCleared: 0,
+    unlocked: [...STARTING],
+    ...overrides
+  };
+  const save = createStorage({ [V2]: JSON.stringify(stored) });
+  const env = boot({ files: ['progress.js', 'game.js'], save });
+  const api = env.global.__nailongTower;
+  api.game.sound = false;
+  return { env, api, save };
+}
+
+function toastText(env) {
+  const node = env.nodes.get('toast');
+  return node ? node.textContent : '';
+}
+
+function persisted(save) {
+  return JSON.parse(save.getItem(V2));
+}
+
+function sorted(list) {
+  return [...list].sort();
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+test('通关 0 关时只有四个初始角色，也不会弹解锁提示', () => {
+  const { env, api } = towerWithProgress({ highestCleared: 0 });
+  api.checkCharacterUnlocks();
+  assert.deepEqual(sorted(api.progress.unlocked), sorted(STARTING));
+  assert.equal(toastText(env), '');
+});
+
+test('通关第 2 关解锁奶鼠（toast 用角色中文名）', () => {
+  const { env, api } = towerWithProgress({ highestCleared: 2 });
+  api.checkCharacterUnlocks();
+  assert.ok(api.progress.unlocked.includes('rat'));
+  assert.deepEqual(sorted(api.progress.unlocked), sorted([...STARTING, 'rat']));
+  assert.match(toastText(env), /解锁新角色/);
+  assert.match(toastText(env), /奶鼠/);
+});
+
+test('通关第 5 关解锁奶鼠、奶兔、奶狗、奶虎，奶羊还不解锁', () => {
+  const { env, api } = towerWithProgress({ highestCleared: 5 });
+  api.checkCharacterUnlocks();
+  for (const key of ['rat', 'rabbit', 'dog', 'tiger']) {
+    assert.ok(api.progress.unlocked.includes(key), `${key} 应已解锁`);
   }
-  return { unlocked, newlyUnlocked };
-}
-
-// --- Test helpers ---
-let passed = 0;
-let failed = 0;
-
-function assert(condition, message) {
-  if (condition) {
-    passed++;
-    console.log(`  PASS: ${message}`);
-  } else {
-    failed++;
-    console.error(`  FAIL: ${message}`);
+  assert.equal(api.progress.unlocked.includes('goat'), false);
+  assert.deepEqual(sorted(api.progress.unlocked), sorted([...STARTING, 'rat', 'rabbit', 'dog', 'tiger']));
+  for (const name of ['奶鼠', '奶兔', '奶狗', '奶虎']) {
+    assert.ok(toastText(env).includes(name), `toast 缺少 ${name}`);
   }
-}
+});
 
-function assertArraysEqual(actual, expected, message) {
-  const actualSorted = [...actual].sort();
-  const expectedSorted = [...expected].sort();
-  assert(
-    actualSorted.length === expectedSorted.length &&
-    actualSorted.every((v, i) => v === expectedSorted[i]),
-    `${message} (got [${actualSorted}], expected [${expectedSorted}])`
-  );
-}
+test('通关第 10 关解锁全部十三个角色', () => {
+  const { api } = towerWithProgress({ highestCleared: 10 });
+  api.checkCharacterUnlocks();
+  const all = [...STARTING, ...Object.keys(GATES)];
+  assert.equal(all.length, ProgressStore.ALL_UNITS.length);
+  assert.deepEqual(sorted(api.progress.unlocked), sorted(all));
+});
 
-// --- Tests ---
-console.log('\n=== Character Unlock Logic Tests ===\n');
+test('已登记的角色不会被重复加进解锁列表', () => {
+  const { env, api } = towerWithProgress({
+    highestCleared: 3,
+    unlocked: [...STARTING, 'rat', 'rabbit']
+  });
+  api.checkCharacterUnlocks();
+  assert.deepEqual(sorted(api.progress.unlocked), sorted([...STARTING, 'rat', 'rabbit']));
+  assert.equal(toastText(env), '');
+});
 
-console.log('Test 1: Starting units are always unlocked');
-{
-  const result = checkCharacterUnlocks(0, [...STARTING_UNITS]);
-  assertArraysEqual(result.unlocked, STARTING_UNITS, 'At level 0, only starting units');
-  assert(result.newlyUnlocked.length === 0, 'No new unlocks at level 0');
-}
+test('通关第 7 关解锁到奶鸡，奶猪/奶马/奶龙仍未解锁', () => {
+  const { api } = towerWithProgress({ highestCleared: 7 });
+  api.checkCharacterUnlocks();
+  for (const key of ['rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster']) {
+    assert.ok(api.progress.unlocked.includes(key), `${key} 应已解锁`);
+  }
+  for (const key of ['pig', 'horse', 'dragon']) {
+    assert.equal(api.progress.unlocked.includes(key), false, `${key} 不该提前解锁`);
+  }
+  assert.deepEqual(sorted(api.progress.unlocked),
+    sorted([...STARTING, 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster']));
+});
 
-console.log('\nTest 2: Clearing level 2 unlocks rat');
-{
-  const result = checkCharacterUnlocks(2, [...STARTING_UNITS]);
-  assert(result.unlocked.includes('rat'), 'rat unlocked after level 2');
-  assertArraysEqual(result.newlyUnlocked, ['rat'], 'Only rat is newly unlocked');
-}
+test('CHARACTER_UNLOCK_LEVELS 的等级门槛与关卡顺序一致', () => {
+  assert.deepEqual(GATES, {
+    rat: 2, rabbit: 3, dog: 4, tiger: 5,
+    goat: 6, rooster: 7, pig: 8, horse: 9, dragon: 10
+  });
+  for (const key of Object.keys(GATES)) {
+    assert.ok(ProgressStore.ALL_UNITS.includes(key), `${key} 必须是真实存在的角色`);
+    assert.equal(STARTING.includes(key), false, `初始角色不该配门槛`);
+  }
+});
 
-console.log('\nTest 3: Clearing level 5 unlocks rat, rabbit, dog, tiger');
-{
-  const result = checkCharacterUnlocks(5, [...STARTING_UNITS]);
-  assert(result.unlocked.includes('rat'), 'rat unlocked at level 5');
-  assert(result.unlocked.includes('rabbit'), 'rabbit unlocked at level 5');
-  assert(result.unlocked.includes('dog'), 'dog unlocked at level 5');
-  assert(result.unlocked.includes('tiger'), 'tiger unlocked at level 5');
-  assert(!result.unlocked.includes('goat'), 'goat NOT unlocked at level 5');
-  assertArraysEqual(result.newlyUnlocked, ['rat', 'rabbit', 'dog', 'tiger'], 'Correct newly unlocked list');
-}
+test('通关第 1 关不解锁任何新角色', () => {
+  const { env, api } = towerWithProgress({ highestCleared: 1 });
+  api.checkCharacterUnlocks();
+  assert.deepEqual(sorted(api.progress.unlocked), sorted(STARTING));
+  assert.equal(toastText(env), '');
+});
 
-console.log('\nTest 4: Clearing level 10 unlocks all characters');
-{
-  const result = checkCharacterUnlocks(10, [...STARTING_UNITS]);
-  const allCharacters = [...STARTING_UNITS, ...Object.keys(CHARACTER_UNLOCK_LEVELS)];
-  assertArraysEqual(result.unlocked, allCharacters, 'All characters unlocked at level 10');
-}
+test('奶黄时代买下的角色保持可用（拥有即解锁）', () => {
+  const { env, api } = towerWithProgress({ highestCleared: 0, unlocked: [...STARTING, 'dragon'] });
+  api.checkCharacterUnlocks();
+  assert.ok(api.progress.unlocked.includes('dragon'), 'dragon 不能被检查过程抹掉');
+  assert.equal(toastText(env), '');
+  assert.equal(api.isUnlocked('dragon'), true);
+  assert.equal(ProgressStore.isCharacterUnlocked('dragon', api.progress), true);
+  assert.equal(api.isUnlocked('horse'), false);
+});
 
-console.log('\nTest 5: Already unlocked characters are not re-added');
-{
-  const existingUnlocked = [...STARTING_UNITS, 'rat', 'rabbit'];
-  const result = checkCharacterUnlocks(3, existingUnlocked);
-  assert(result.newlyUnlocked.length === 0, 'No new unlocks when already unlocked');
-  assert(result.unlocked.length === existingUnlocked.length, 'Unlocked list unchanged');
-}
+test('解锁检查是幂等的，第二次运行不再新增', () => {
+  const { api, save } = towerWithProgress({ highestCleared: 5 });
+  api.checkCharacterUnlocks();
+  const afterFirst = sorted(api.progress.unlocked);
+  const storedAfterFirst = JSON.stringify(persisted(save));
+  api.checkCharacterUnlocks();
+  assert.deepEqual(sorted(api.progress.unlocked), afterFirst);
+  assert.equal(JSON.stringify(persisted(save)), storedAfterFirst, '第二次运行不该改存档');
+});
 
-console.log('\nTest 6: Progressive unlocking — level 7 unlocks up to rooster');
-{
-  const result = checkCharacterUnlocks(7, [...STARTING_UNITS]);
-  assert(result.unlocked.includes('rat'), 'rat unlocked');
-  assert(result.unlocked.includes('rabbit'), 'rabbit unlocked');
-  assert(result.unlocked.includes('dog'), 'dog unlocked');
-  assert(result.unlocked.includes('tiger'), 'tiger unlocked');
-  assert(result.unlocked.includes('goat'), 'goat unlocked');
-  assert(result.unlocked.includes('rooster'), 'rooster unlocked');
-  assert(!result.unlocked.includes('pig'), 'pig NOT unlocked at level 7');
-  assert(!result.unlocked.includes('horse'), 'horse NOT unlocked at level 7');
-  assert(!result.unlocked.includes('dragon'), 'dragon NOT unlocked at level 7');
-}
+test('解锁结果会写回存档，登记前卡池也已按关卡门槛放行', () => {
+  const { api, save } = towerWithProgress({ highestCleared: 2 });
+  // 生产的 isUnlocked 判定是"达到门槛 或 已经拥有"，
+  // 所以 unlocked 列表还没登记奶鼠时，第 2 关通关本身就已经放行。
+  assert.equal(api.progress.unlocked.includes('rat'), false);
+  assert.equal(api.isUnlocked('rat'), true);
 
-console.log('\nTest 7: CHARACTER_UNLOCK_LEVELS has correct mapping');
-{
-  assert(CHARACTER_UNLOCK_LEVELS.rat === 2, 'rat requires level 2');
-  assert(CHARACTER_UNLOCK_LEVELS.rabbit === 3, 'rabbit requires level 3');
-  assert(CHARACTER_UNLOCK_LEVELS.dog === 4, 'dog requires level 4');
-  assert(CHARACTER_UNLOCK_LEVELS.tiger === 5, 'tiger requires level 5');
-  assert(CHARACTER_UNLOCK_LEVELS.goat === 6, 'goat requires level 6');
-  assert(CHARACTER_UNLOCK_LEVELS.rooster === 7, 'rooster requires level 7');
-  assert(CHARACTER_UNLOCK_LEVELS.pig === 8, 'pig requires level 8');
-  assert(CHARACTER_UNLOCK_LEVELS.horse === 9, 'horse requires level 9');
-  assert(CHARACTER_UNLOCK_LEVELS.dragon === 10, 'dragon requires level 10');
-}
+  api.checkCharacterUnlocks();
 
-console.log('\nTest 8: Clearing level 1 does not unlock any new character');
-{
-  const result = checkCharacterUnlocks(1, [...STARTING_UNITS]);
-  assert(result.newlyUnlocked.length === 0, 'No new unlocks at level 1');
-  assertArraysEqual(result.unlocked, STARTING_UNITS, 'Only starting units at level 1');
-}
-
-console.log('\nTest 9: Existing custard-unlocked characters are preserved');
-{
-  // Simulate a save where 'dragon' was unlocked via custard previously
-  const existingUnlocked = [...STARTING_UNITS, 'dragon'];
-  const result = checkCharacterUnlocks(0, existingUnlocked);
-  assert(result.unlocked.includes('dragon'), 'dragon remains unlocked from custard era');
-  assert(result.newlyUnlocked.length === 0, 'No new unlocks triggered');
-}
-
-console.log('\nTest 10: Unlocking is idempotent — running check twice yields same result');
-{
-  let unlocked = [...STARTING_UNITS];
-  const result1 = checkCharacterUnlocks(5, unlocked);
-  unlocked = result1.unlocked;
-  const result2 = checkCharacterUnlocks(5, unlocked);
-  assert(result2.newlyUnlocked.length === 0, 'Second run finds no new unlocks');
-  assertArraysEqual(result1.unlocked, result2.unlocked, 'Unlocked list stable across runs');
-}
-
-// --- Summary ---
-console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
-process.exit(failed > 0 ? 1 : 0);
+  assert.ok(persisted(save).unlocked.includes('rat'), 'unlocked 必须落盘，否则下次进页面又被锁');
+  assert.equal(api.isUnlocked('rat'), true);
+});

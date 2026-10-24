@@ -1,24 +1,17 @@
 /* action-levels.js — Mode B level select logic */
 
-const MAX_LEVEL = 12;
-const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
+const MAX_LEVEL = ProgressStore.MAX_LEVEL;
 const PER_PAGE = 5;
 
 let trackStart = 1;
 let selectedLevel = 1;
 
 function loadProgress() {
-  try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY)) || {};
-  } catch {
-    return {};
-  }
+  return ProgressStore.load();
 }
 
 function unlockedLevel() {
-  const progress = loadProgress();
-  const endlessWave = progress.endlessBest?.wave || 0;
-  return Math.min(MAX_LEVEL, Math.floor(endlessWave / 3) + 1);
+  return ProgressStore.actionLevelsUnlocked(loadProgress().endlessBest.wave);
 }
 
 function renderLevelTrack() {
@@ -47,7 +40,7 @@ function renderLevelTrack() {
     card.innerHTML = `
       <span class="level-number">LEVEL ${String(i).padStart(2, '0')}</span>
       <span class="level-title">第 ${i} 关</span>
-      ${i === 12 ? '<span class="boss-tag">BOSS</span>' : ''}
+      ${i === MAX_LEVEL ? '<span class="boss-tag">BOSS</span>' : ''}
     `;
 
     if (!isLocked) {
@@ -70,7 +63,7 @@ function selectLevel(level) {
 
 function renderLevelPreview() {
   const preview = document.getElementById('levelPreview');
-  const isBoss = selectedLevel === 12;
+  const isBoss = selectedLevel === MAX_LEVEL;
   const progress = loadProgress();
   const actionCleared = progress.actionHighestCleared || 0;
   const isCleared = selectedLevel <= actionCleared;

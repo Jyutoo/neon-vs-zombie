@@ -24,6 +24,42 @@
       };
     }
 
+    // Each of the twelve levels gets its own fight: more screens, bigger batches,
+    // tougher zombies and a beefier zombie king.
+    function growBatch(batch, extra) {
+      const grown = batch.slice();
+      for (let i = 0; i < extra; i++) grown.push(batch[i % batch.length]);
+      return grown;
+    }
+
+    function levelConfig(level) {
+      const L = DATA.level;
+      const P = L.progression;
+      const index = Math.max(1, Math.min(L.maxLevel, Math.floor(Number(level)) || 1));
+      const step = index - 1;
+      const extraScreens = Math.floor(step / P.extraScreenEvery);
+      const extraEnemies = Math.floor(step / P.extraEnemyEvery);
+      const combat = L.screens.map(screen => ({
+        batches: screen.batches.map(batch => growBatch(batch, extraEnemies))
+      }));
+      for (let i = 0; i < extraScreens; i++) {
+        const source = L.screens[i % L.screens.length];
+        combat.push({ batches: source.batches.map(batch => growBatch(batch, extraEnemies)) });
+      }
+      const screens = combat.concat([{ boss: true }]);
+      return {
+        index,
+        screens,
+        worldWidth: screens.length * L.screenWidth,
+        scaling: {
+          hpMul: 1 + P.hpPerLevel * step,
+          dmgMul: 1 + P.dmgPerLevel * step,
+          speedMul: Math.min(P.maxSpeedMul, 1 + P.speedPerLevel * step)
+        },
+        bossHp: Math.round(DATA.boss.hp * (1 + P.bossHpPerLevel * step))
+      };
+    }
+
     function applyUpgrade(stats, upgrade) {
       const next = { ...stats };
       const apply = upgrade.apply || {};
@@ -69,7 +105,7 @@
       return Math.max(0, Math.min(targetX, worldWidth - viewWidth));
     }
 
-    return { xpToNext, waveConfig, applyUpgrade, rollUpgrades, scaleEnemy, rectsOverlap, verticalOverlap, clampCamera };
+    return { xpToNext, waveConfig, levelConfig, applyUpgrade, rollUpgrades, scaleEnemy, rectsOverlap, verticalOverlap, clampCamera };
   }
 
   if (typeof module === 'object' && module.exports) module.exports = createLogic(require('./action-data.js'));

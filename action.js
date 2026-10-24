@@ -64,15 +64,11 @@
 
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode') === 'endless' ? 'endless' : 'level';
-  const levelParam = Math.max(1, Math.min(12, parseInt(params.get('level')) || 1));
+  const levelParam = Math.max(1, Math.min(DATA.level.maxLevel, parseInt(params.get('level')) || 1));
+  const levelFlow = mode === 'level' ? Logic.levelConfig(levelParam) : null;
 
   function loadActionProgress() {
-    const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
-    try {
-      const raw = JSON.parse(localStorage.getItem(saveKey));
-      if (raw && typeof raw === 'object') return raw;
-    } catch {}
-    return { upgrades: {} };
+    return ProgressStore.load();
   }
 
   function getUpgradeMultiplier(totalLevels, percentPerLevel) {
@@ -138,6 +134,7 @@
   const state = {
     mode,
     levelParam,
+    levelFlow,
     status: 'playing',
     sound: true,
     helpReturn: null,
@@ -145,7 +142,7 @@
     cameraX: 0,
     shake: 0,
     hitstop: 0,
-    worldWidth: mode === 'level' ? DATA.level.worldWidth : DATA.arena.width,
+    worldWidth: levelFlow ? levelFlow.worldWidth : DATA.arena.width,
     levelPhase: 'combat',
     screenIndex: 0,
     screenCleared: false,
@@ -538,7 +535,10 @@
   }
 
   function spawnEnemy(type, x, overrides = {}) {
-    const cfg = { ...DATA.enemies[type], ...overrides };
+    const base = state.levelFlow
+      ? Logic.scaleEnemy(DATA.enemies[type], state.levelFlow.scaling)
+      : DATA.enemies[type];
+    const cfg = { ...base, ...overrides };
     const enemy = {
       id: state.nextId++,
       type,
@@ -568,6 +568,7 @@
   function spawnBoss() {
     const cfg = DATA.boss;
     const bounds = bossBounds();
+    const hp = state.levelFlow ? state.levelFlow.bossHp : cfg.hp;
     const boss = {
       id: state.nextId++,
       type: 'boss',
@@ -575,8 +576,8 @@
       x: Math.max(bounds.min, Math.min(bounds.max, state.player.x + 700)),
       y: DATA.arena.groundY,
       facing: -1,
-      hp: cfg.hp,
-      maxHp: cfg.hp,
+      hp,
+      maxHp: hp,
       state: 'idle',
       action: null,
       actionTimer: 0,
@@ -850,15 +851,10 @@
     keys.clear();
     // Save progress for level mode
     if (state.mode === 'level') {
-      const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
-      try {
-        const saveData = JSON.parse(localStorage.getItem(saveKey) || 'null') || {};
-        const current = saveData.actionHighestCleared || 0;
-        if (state.levelParam > current) {
-          saveData.actionHighestCleared = state.levelParam;
-          localStorage.setItem(saveKey, JSON.stringify(saveData));
-        }
-      } catch {}
+      ProgressStore.update(saved => {
+        saved.actionHighestCleared = Math.max(saved.actionHighestCleared,
+          Math.min(ProgressStore.MAX_LEVEL, state.levelParam));
+      });
     }
     const total = Math.floor(state.time);
     const minutes = Math.floor(total / 60);
@@ -947,7 +943,7 @@
     <div class="result-card">
       <span class="eyebrow">本局结束</span>
       <h2>奶娃倒下了</h2>
-      <p>到达第 ${Math.min(state.screenIndex + 1, DATA.level.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
+      <p>到达第 ${Math.min(state.screenIndex + 1, state.levelFlow.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
       <div class="result-actions">
         <button id="retryButton" class="primary-button">重新挑战</button>
         <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
@@ -1028,7 +1024,7 @@
     state.screenCleared = false;
     state.levelPhase = 'combat';
     state.spawnQueue = [];
-    const screen = DATA.level.screens[index];
+    const screen = state.levelFlow.screens[index];
     const boundary = (index + 1) * DATA.level.screenWidth;
     if (screen.boss) {
       state.levelPhase = 'boss';
@@ -1048,7 +1044,7 @@
       offset += DATA.level.batchDelay;
     });
     state.spawnQueue.sort((a, b) => a.at - b.at);
-    stageLabel.textContent = `第 ${index + 1} / ${DATA.level.screens.length - 1} 段`;
+    stageLabel.textContent = `第 ${index + 1} / ${state.levelFlow.screens.length - 1} 段`;
   }
 
   function startWave(wave) {
@@ -1086,21 +1082,17 @@
   }
 
   function finishEndless() {
-    const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
-    let newRecord = false;
-    try {
-      const saveData = JSON.parse(localStorage.getItem(saveKey) || 'null') || {};
-      const best = saveData.endlessBest || { wave: 0, kills: 0, date: null };
-      if (!best || state.wave > best.wave) {
-        saveData.endlessBest = {
+    const previousBest = ProgressStore.load().endlessBest.wave;
+    const newRecord = state.wave > previousBest;
+    if (newRecord) {
+      ProgressStore.update(saved => {
+        saved.endlessBest = {
           wave: state.wave,
           kills: state.kills,
           date: new Date().toISOString().slice(0, 10)
         };
-        localStorage.setItem(saveKey, JSON.stringify(saveData));
-        newRecord = true;
-      }
-    } catch {}
+      });
+    }
     openOverlay(`
       <div class="result-card">
         <span class="eyebrow">无尽模式</span>
@@ -1116,7 +1108,7 @@
 
   function updateLevelFlow() {
     const p = state.player;
-    const screen = DATA.level.screens[state.screenIndex];
+    const screens = state.levelFlow.screens;
     const boundary = (state.screenIndex + 1) * DATA.level.screenWidth;
 
     if (state.levelPhase !== 'advance') {
@@ -1132,18 +1124,20 @@
     }
 
     if (state.levelPhase === 'advance') {
-      if (state.screenIndex < DATA.level.screens.length - 1 && p.x >= boundary + DATA.level.edgeMargin) {
+      if (state.screenIndex < screens.length - 1 && p.x >= boundary + DATA.level.edgeMargin) {
         startScreen(state.screenIndex + 1);
       }
       return;
     }
 
-    if (state.levelPhase !== 'combat' && state.levelPhase !== 'boss') return;
+    // Only combat screens advance on a wipe. The win check needs levelPhase to
+    // stay 'boss' until the boss dies, and the boss is often the last enemy.
+    if (state.levelPhase !== 'combat') return;
 
     if (!state.spawnQueue.length && !state.enemies.some(enemy => enemy.hp > 0)) {
       state.screenCleared = true;
       state.levelPhase = 'advance';
-      if (state.screenIndex === DATA.level.screens.length - 2) {
+      if (state.screenIndex === screens.length - 2) {
         stageLabel.textContent = '前往僵尸王';
         announceWave('前方就是僵尸王');
       } else {
@@ -1350,5 +1344,9 @@
   requestAnimationFrame(frame);
   setTimeout(() => document.getElementById('tipBar').classList.add('hidden'), 8000);
 
-  window.__nailong = { state, spawnEnemy, hurtPlayer, startScreen, spawnBoss, gainXp, resetActionGame };
+  window.__nailong = {
+    state, spawnEnemy, spawnBoss, damageEnemy, update, updateLevelFlow,
+    startScreen, hurtPlayer, gainXp, winLevel, finishEndless, resetActionGame,
+    applyModeBUpgrades, getUpgradeMultiplier
+  };
 })();

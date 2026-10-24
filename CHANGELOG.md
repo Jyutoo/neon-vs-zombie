@@ -1,5 +1,68 @@
 # 优化记录
 
+## 2026-10-25 重写 `tests/integration.test.js`：改用真实入口（Issue #2 测试缺口收尾）
+
+**更新类型：** 测试
+
+**改动内容：**
+1. **删除 14 份生产函数副本** — 文件顶部原本抄了 `migrateSaveV1ToV2` / `defaultProgress` / `createMockStorage` / `loadProgressWithMigration` / `levelWaveCount` / `firstClearReward` / `repeatReward` / `checkCharacterUnlocks` / `modeBUnlockedLevel` / `getUpgradeMultiplier` / `computeModeAEffects` / `computeModeBEffects` / `finishModeALevel` / `performUpgrade`，然后对着自己的副本断言；其中存档相关的几份在 `progress.js` 收口后已不存在于生产代码，等于永久绿灯。现在 29 个用例全部经 `tests/helpers/browser-env.js` 载入未修改的生产脚本来驱动：`window.__nailongTower`、`window.__nailong`、`upgradeCharacter`、`unlockedLevel` 与 `ProgressStore.*`
+2. **场景改为跨页面串联** — 打关用 `startLevel()` + `finishGame(true/false)` 并断言落盘存档；解锁用真实结算路径（顺带校验 `toast` 文案与 `isUnlocked()`）；强化走商店真实购买路径，价格从卡片 `innerHTML` 里读来而不是写死（含「全阵容升满花 165,100」）；模式B 解锁走 `finishEndless()` / `winLevel()` → 关卡选择页渲染出的卡片 class
+3. **按生产实现校正断言**（副本与真实行为不一致的地方一律保留生产行为）：结算写回是 `progress.custard = game.custard + reward`（含 150 保底与局内消费），重玩旧关卡会把 `selectedLevel` 移到该关，`highestCleared` 在迁移时钳到 12，`totalEarned` 已不是 v2 字段，`finishGame` 有 `state !== 'running'` 守卫（重复结算不再二次发钱），越界的波次记录经 `actionLevelsUnlocked` 归到 1
+4. **去掉与 `tests/save-paths.test.js` / `tests/progress-store.test.js` 重复的用例** — 五个纯 `modeBUnlockedLevel` 公式用例、以及「模式B 结算不会抹掉钱包」「第 12 关通关不给第十三关」两类场景不再重复添加
+
+**影响范围：** 仅 `tests/integration.test.js`（824 行 → 749 行，33 个用例 → 29 个）；未改动任何生产文件与其他测试文件。测试文件内只剩驱动型辅助（boot / 播种存档 / 读取渲染结果 / 跨 realm 复制值）
+- 注意：VM 上下文里造出的对象带的是那个 realm 的原型，跨 realm 的 `deepEqual` 会只因原型不同而失败，故加了 `plain()` 再比较
+- 注意：DOM 桩不会因 `innerHTML = ''` 清空 `children`，页面重渲染是追加，取卡片必须取最后一个匹配项
+
+**验证：** `node --check tests/integration.test.js` 通过；`node --test tests/integration.test.js` → 29/29 通过；`node --test tests/*.test.js` 全绿。另在仓库外的临时副本上做过变异测试（仅改副本，未动生产文件）：`firstClearReward` 斜率 15→14、`actionLevelsUnlocked` 除 3→除 4、`UPGRADE_COSTS` 800→900、`healOnKill` ×2→×3、`levelWaveCount` 5→6、结算改回 `progress.custard + reward` 均导致对应用例失败，改回后重新全绿。
+
+---
+
+## 2026-10-25 修复 Issue #2：存档遮蔽、强化空卡片与关卡边界（6 项）
+
+**更新类型：** 修复
+
+**改动内容：**
+1. **新增 `progress.js` 统一存档层**（对应 Issue #2 第 1、2、6 项） — 此前 `game.js` / `action.js` / `upgrade.js` / `action-levels.js` / `menu.js` 各自实现一份读写逻辑，字段还不一样。新模块把「读档 → v1 迁移 → 归一化 → 落盘」收成一个入口，并按字段是否存在分层合并：无尽模式只写 `endlessBest` 时不会把 v1 迁移来的 `custard`/`highestCleared`/`unlocked` 覆盖成默认值，塔防页面不再显示 0 奶黄、0 通关、4 个角色
+2. **强化页面不再依赖存档存在**（第 2 项） — 删除 `renderUpgradeCards()` 里 `if (!progress) return;` 的提前返回，全新玩家直接进入「强化奶娃」也能看到 13 张卡片与 500 奶黄余额，而不是空白网格
+3. **拥有即解锁**（第 6 项） — `isCharacterUnlocked()` 同时接受「存档里已拥有」与「通关等级达标」两个条件，v1 迁移保留下来的角色（如奶龙）在强化页保持可用，不会被重新锁回
+4. **模式B 12 关独立战斗配置**（第 4 项） — 新增 `Logic.levelConfig(level)`，按关卡生成屏幕数、每屏批次、怪物成长与世界宽度；`action-data.js` 的 `level.screens` 退化为「基础战斗模板」，Boss 屏改由 `levelConfig` 追加。第 1 关 3 段 / 僵尸王 1200 血，第 12 关 5 段 / 僵尸王 3180 血，怪物血量与伤害按关卡倍率缩放
+5. **塔防关卡硬上限 12**（第 5 项） — `startLevel()` 拒绝越界请求并提示「第 12 关就是最终关」；通关第 12 关时 `selectedLevel` 钳制在 12，结算弹窗不再出现「下一关」，改为全通关庆祝文案
+6. **Boss 作为最后一名敌人时正常结算**（旧缺陷回归 P1） — `updateLevelFlow()` 的清场推进只作用于 `levelPhase === 'combat'`，避免 Boss 屏在 Boss 尚存活时被切成 `advance` 而绕过胜利判定
+7. **补齐真实入口测试**（Issue #2 的测试覆盖缺口） — 新增 `tests/helpers/browser-env.js`（在不修改源码的前提下把生产脚本载入 Node VM，含 DOM/localStorage 桩），配套 `progress-store`、`save-paths`、`action-level-flow`、`boss-settlement` 四个新测试文件，全部调用页面真实入口而非复制逻辑；`game.js`/`action.js` 的调试句柄相应扩充导出面
+8. **同步失效文案与文档** — 关卡结构调整后，`index.html` 的"击退五波僵尸""三段关卡"与 `game.html` 的"每关五波…每 5 关迎战僵尸王"都已与实现不符，改为"守住 12 关庭院""逐段清怪决战僵尸王""每关 5–10 波…第 12 关迎战僵尸王"；README 的模式B 闯关段补上逐关成长公式；AGENTS.md 明确 `progress.js` 是唯一存档入口，并新增"测试不许复制被测函数"的流程约定与两条已知坑（Boss 屏下标、清场推进只作用于 combat 阶段）
+9. **改造 5 份复制逻辑的旧测试** — `tests/save-migration.test.js`、`unlock-logic.test.js`、`level-config.test.js`、`upgrade-effects.test.js`、`integration.test.js` 原先各自抄一份被测函数再对副本断言（`progress.js` 收口后，抄存档的那几份等于永久绿灯）。现全部改为经 `browser-env.js` 驱动生产入口，用例总数从 80 增至 132；`integration.test.js` 的重写细节见本文顶部那条独立记录
+
+**影响范围：**
+- 新增 `progress.js`；`index.html`、`game.html`、`action.html`、`action-levels.html`、`upgrade.html` 均在其页面脚本之前加载该文件
+- `game.js`：删除 `defaultProgress` / `migrateSaveV1ToV2` / `loadProgress`，改由 `ProgressStore` 提供；新增关卡上限与最终关结算
+- `action.js`：`levelFlow` 进入 state，敌人/Boss 按关卡缩放，`winLevel` / `finishEndless` 改走 `ProgressStore.update`，删除废弃的 `nailong.action.endlessBest` 独立键
+- `action-logic.js` / `action-data.js`：新增 `levelConfig` 与 `level.progression` / `level.maxLevel`，删除死配置 `storageKeys`
+- `upgrade.js`、`action-levels.js`、`menu.js`：改为调用 `ProgressStore`
+- 测试：新增 4 个文件共 26 个用例；另把 5 份复制被测函数的旧文件改为驱动生产入口，套件规模 80 → 132 项
+
+**验证：** `node --test tests/*.test.js` 全部通过（132 项 / 0 失败），8 个 JS 文件 `node --check` 无语法错误。另在真实浏览器（file:// 打开各页面）逐项复核 Issue #2：先玩无尽再进塔防仍读到 350 奶黄 / 5 关 / 6 个角色且 v1 键被正常退役；全新玩家进入强化页得到 13 张卡片与 500 余额；第 12 关实测 6 段（5 段战斗 + 僵尸王）、`worldWidth 7680`、僵尸王 3180 血、小怪 126 血 / 12.4 伤害 / 75.6 速度（对第 1 关的 60 / 8 / 62），舞台标签为「第 1 / 5 段」；清空第 12 关最后一名敌人（僵尸王）后 `status = won`、`levelPhase = cleared` 并弹出「闯关成功 第 12 关通过」，存档写入 `actionHighestCleared: 12`；通关第 12 关后 `selectedLevel` 停在 12、结算无「下一关」按钮、`startLevel(13)` 被提示拒绝；v1 迁移来的奶龙在强化页可升级而小马显示「通关第 9 关解锁」；关卡选择页在 `endlessBest.wave = 9` 时放出 4 关、第 5 关锁定。全过程控制台无 error / warn。
+
+---
+
+## 2026-10-25 新增 AGENTS.md、重写 README、清理失效文档
+
+**更新类型：** 文档
+
+**改动内容：**
+1. **新增 `AGENTS.md`** — 为 AI 编码代理沉淀项目约定：模式A/模式B 术语、文件职责、测试与语法检查命令、纯逻辑与 DOM 分离、脚底坐标几何约定、奶黄双概念与存档生命周期、必须写 CHANGELOG 的流程，以及中文路径、舞台缩放、`fire.halfAngleDeg` 死配置等已知坑
+2. **重写 `README.md`** — 旧版仍停留在"无限关卡 + 奶币解锁 + v1 存档键 + 6 项测试"，与重构后的实现严重不符；按现状改写为 12 关塔防、12 关格斗、全局奶黄经济、奶娃强化系统、解锁公式与完整项目结构树
+3. **删除 7 份失效文档** — `OPTIMIZATION_PLAN.md`、`ROUND2~5_OPTIMIZATION_PLAN.md`（第 1~5 轮历史计划，已被本 CHANGELOG 与 `docs/superpowers/` 取代）、`docs/superpowers/` 下 2026-10-24 的 spec 与 plan（对应功能已完成上线）
+
+**影响范围：**
+- 新增 AGENTS.md；README.md 全文重写
+- 删除 5 份根目录优化计划文档与 2 份 2026-10-24 设计文档
+- 保留 `.superpowers/` 本地暂存与 `assets/source-*` 原始素材（用户确认不删）
+
+**验证：** 无代码改动；`node --test tests/*.test.js` 仍为 80/80 通过。
+
+---
+
 ## 2026-10-25 修复模式B攻速选项与空中命中判定
 
 **更新类型：** 修复
