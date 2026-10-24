@@ -57,6 +57,7 @@
 
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode') === 'endless' ? 'endless' : 'level';
+  const levelParam = Math.max(1, Math.min(12, parseInt(params.get('level')) || 1));
 
   function createPlayer(mode) {
     return {
@@ -89,6 +90,7 @@
 
   const state = {
     mode,
+    levelParam,
     status: 'playing',
     sound: true,
     helpReturn: null,
@@ -779,17 +781,29 @@
     if (state.status !== 'playing') return;
     state.status = 'won';
     keys.clear();
+    // Save progress for level mode
+    if (state.mode === 'level') {
+      const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
+      try {
+        const saveData = JSON.parse(localStorage.getItem(saveKey) || 'null') || {};
+        const current = saveData.actionHighestCleared || 0;
+        if (state.levelParam > current) {
+          saveData.actionHighestCleared = state.levelParam;
+          localStorage.setItem(saveKey, JSON.stringify(saveData));
+        }
+      } catch {}
+    }
     const total = Math.floor(state.time);
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
     openOverlay(`
       <div class="result-card">
         <span class="eyebrow">闯关成功</span>
-        <h2>僵尸王被击败了！</h2>
+        <h2>第 ${state.levelParam} 关通过！</h2>
         <p>用时 ${minutes} 分 ${seconds} 秒，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
         <div class="result-actions">
           <button id="retryButton" class="primary-button">再玩一次</button>
-          <a class="primary-button ghost" href="index.html">返回主菜单</a>
+          <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
         </div>
       </div>`);
     document.getElementById('retryButton').addEventListener('click', resetActionGame);
@@ -861,7 +875,7 @@
       <p>到达第 ${Math.min(state.screenIndex + 1, DATA.level.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
       <div class="result-actions">
         <button id="retryButton" class="primary-button">重新挑战</button>
-        <a class="primary-button ghost" href="index.html">返回主菜单</a>
+        <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
       </div>
     </div>`);
     document.getElementById('retryButton').addEventListener('click', resetActionGame);

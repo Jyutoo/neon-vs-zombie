@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>奶龙战僵尸 - 闯关模式</title>
+  <link rel="stylesheet" href="action-levels.css">
+</head>
+<body>
+  <div class="level-select-shell">
+    <header>
+      <div class="header-info">
+        <span class="eyebrow">闯关模式</span>
+        <h1>选择关卡</h1>
+      </div>
+      <div class="header-stats">
+        <span>已通关 <b id="actionCleared">0</b> 关</span>
+        <span>无尽最佳：<b id="actionEndlessBest">暂无</b></span>
+      </div>
+      <button id="backButton" class="ghost-button">返回主菜单</button>
+    </header>
+
+    <div class="level-track-wrap">
+      <button class="track-arrow" id="trackPrev">&#8249;</button>
+      <div class="level-track-shell">
+        <span class="track-range" id="trackRange">第 1 – 5 关</span>
+        <div id="levelTrack" class="level-track"></div>
+      </div>
+      <button class="track-arrow" id="trackNext">&#8250;</button>
+    </div>
+
+    <div id="levelPreview" class="level-preview"></div>
+  </div>
+
+  <script src="action-levels.js"></script>
+</body>
+</html>
