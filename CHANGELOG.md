@@ -1,5 +1,33 @@
 # 优化记录
 
+## 2026-10-25 项目结构调整：全部代码收进 `src/`
+
+**更新类型：** 重构（无功能变更）
+
+**改动内容：**
+1. **建立 `src/` 目录树** — 5 个页面移到 `src/`，5 个样式移到 `src/css/`，8 个脚本移到 `src/js/`，`assets/` 整目录移到 `src/assets/`（含 `source-*` 抠图源文件，按约定保留）。全部用 `git mv` 完成，`git status` 里 40 项都是 `R`（重命名），历史未断
+2. **素材引用零改动** — 之所以让 `assets/` 跟着进 `src/`，是因为 `game.js` / `action.js` / `upgrade.js` 里有 14 处动态拼的 `assets/${key}.png`（还有 `assets/baby-laugh.mp4`），另有 2 处测试断言按 `assets/${key}.png` 字符串匹配卡片。页面与素材同在 `src/` 下，这些字符串一个字都不用改；若把 assets 留在根目录，这 16 处都要改成 `../assets/` 且极易漏
+3. **页面引用加目录前缀** — 17 处 `<link>` / `<script>` 改为 `css/xxx.css` 与 `js/xxx.js`；跨页链接（`index.html`、`game.html`、`action.html?mode=endless` 等）因页面仍在同一目录而不受影响；5 个 CSS 文件内 **没有任何 `url()`**，所以移动 css 不牵动素材
+4. **启动器改指新入口** — `启动游戏.bat` 由 `start "" "%~dp0index.html"` 改为 `start "" "%~dp0src/index.html"`
+5. **测试层跟进** — `tests/helpers/browser-env.js` 的 `readFile()` 改为在 `src/js` 下解析裸文件名，因此 6 处 `boot({ files: [...] })` 不必逐个改；9 个测试文件里 12 处 `require('../x.js')` 统一改为 `require('../src/js/x.js')`。`action-logic.js` UMD 尾巴里的 `require('./action-data.js')` 是同目录相对路径，随两个文件一起移动仍然成立
+6. **文档同步** — AGENTS.md 的文件职责树、模式A/B 入口、常用命令（`node --check src/js/action.js`）、本地服务入口 URL 全部更新，并新增「页面引用必须带 `css/` `js/` 前缀、`assets/` 与页面同级」的约定；README 的启动说明、入口表、项目结构树（顺带把过期的「6 个文件 80 项」修正为「10 个文件 132 项」并补上 4 个新测试文件与 `progress.js`）、开发与测试命令一并更新
+
+**影响范围：**
+- 移动：`src/*.html`（5）、`src/css/*`（5）、`src/js/*`（8）、`src/assets/*`（22）；仓库根现在只剩 `启动游戏.bat`、`AGENTS.md`、`CHANGELOG.md`、`README.md`、`src/`、`tests/`、`docs/`
+- 修改：5 个 HTML 的资源引用、`启动游戏.bat`、`tests/helpers/browser-env.js`、9 个测试文件的 `require` 路径、`README.md`、`AGENTS.md`
+- **未改动任何生产 JS/CSS 的内容**（除路径无关的部分为零）：`src/js/*.js` 与 `src/css/*.css` 的文件内容一字未变
+- 用户侧影响：入口从仓库根的 `index.html` 变为 `src/index.html`。若曾在浏览器里收藏过 `file:///D:/奶龙大战僵尸/index.html`，需要重新收藏新地址；`localStorage` 不会因移动丢档 —— 实测 `file://` 页面的 `location.origin` 就是 `file://`（不是按目录切分的 opaque origin），从 `src/upgrade.html` 写入的键在 `src/index.html` 里直接读得到，所以旧存档按新路径照样能读
+
+**验证：** `node --test tests/*.test.js` → 132 项 / 0 失败（移动前后各跑一次，数字一致）；`node --check` 对 `src/js/` 下 8 个脚本全部通过。另在真实浏览器（`file:///D:/奶龙大战僵尸/src/...`）逐页复核：
+- `src/index.html` — `css/menu.css` 载入 64 条规则，5 张图全部解码成功，`ProgressStore` 存在，余额横幅由 `menu.js` 填成 500
+- `src/game.html` — `css/styles.css` 383 条规则，33 张带 `src` 的图 0 失败，`__nailongTower` 就绪，`startLevel(1)` 后 `state = running`、`custard = 500`、90 个格子渲染
+- `src/action.html?mode=level&level=12` — `css/action.css` 99 条规则，12 张图 0 失败，第 12 关配置正确（`screens 6`、`worldWidth 7680`、僵尸王 3180 血），舞台宽 1280，`status = playing`
+- `src/action-levels.html` — 45 条规则，渲染 5 张关卡卡片、全新玩家 4 张锁定
+- `src/upgrade.html` — 40 条规则，14 张图 0 失败，13 张强化卡片中 9 张显示解锁条件
+- 网络面板 17 个资源请求全部 200、无 404；控制台 error / warn 为 0；测试结束后已清空该浏览器的 `localStorage`
+
+---
+
 ## 2026-10-25 重写 `tests/integration.test.js`：改用真实入口（Issue #2 测试缺口收尾）
 
 **更新类型：** 测试

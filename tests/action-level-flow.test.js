@@ -7,8 +7,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const DATA = require('../action-data.js');
-const Logic = require('../action-logic.js');
+const DATA = require('../src/js/action-data.js');
+const Logic = require('../src/js/action-logic.js');
 const { boot, createStorage } = require('./helpers/browser-env');
 
 const FILES = ['progress.js', 'action-data.js', 'action-logic.js', 'action.js'];

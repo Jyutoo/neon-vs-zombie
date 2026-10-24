@@ -29,8 +29,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const ProgressStore = require('../progress.js');
-const DATA = require('../action-data.js');
+const ProgressStore = require('../src/js/progress.js');
+const DATA = require('../src/js/action-data.js');
 const { boot, createStorage } = require('./helpers/browser-env');
 
 const V1 = ProgressStore.V1_SAVE_KEY;

@@ -9,23 +9,23 @@
 ## 启动游戏
 
 - Windows：双击 `启动游戏.bat`，直接打开主菜单。
-- 或直接用浏览器打开 `index.html`。
+- 或直接用浏览器打开 `src/index.html`（全部代码都在 `src/` 下）。
 - 建议走本地服务（`localStorage` 在 `file://` 下部分浏览器受限）：
 
   ```bash
   python -m http.server 4173 --bind 127.0.0.1
-  # 访问 http://127.0.0.1:4173
+  # 访问 http://127.0.0.1:4173/src/index.html
   ```
 
 ## 入口一览
 
 | 页面 | 内容 |
 | --- | --- |
-| `index.html` | 主菜单：三张模式卡 + 奶黄余额横幅 + 帮助弹层 |
-| `game.html` | 模式A 关卡选择与塔防战斗 |
-| `action-levels.html` | 模式B 关卡选择 |
-| `action.html` | 模式B 战斗（`?mode=endless` 进入无尽） |
-| `upgrade.html` | 奶娃强化系统 |
+| `src/index.html` | 主菜单：三张模式卡 + 奶黄余额横幅 + 帮助弹层 |
+| `src/game.html` | 模式A 关卡选择与塔防战斗 |
+| `src/action-levels.html` | 模式B 关卡选择 |
+| `src/action.html` | 模式B 战斗（`?mode=endless` 进入无尽） |
+| `src/upgrade.html` | 奶娃强化系统 |
 
 ## 模式A：塔防
 
@@ -122,7 +122,7 @@
 
 ## 奶娃强化系统
 
-主菜单进入 `upgrade.html`，消耗全局奶黄为 13 个方向各自升到 7 级。**强化效果同时作用于模式A 与模式B**，与局内肉鸽升级互不冲突、叠加生效。
+主菜单进入 `src/upgrade.html`，消耗全局奶黄为 13 个方向各自升到 7 级。**强化效果同时作用于模式A 与模式B**，与局内肉鸽升级互不冲突、叠加生效。
 
 费用逐级为 `100 / 200 / 400 / 800 / 1600 / 3200 / 6400` 奶黄。
 
@@ -154,16 +154,24 @@
 
 ```text
 nailong-vs-zombies/
-├── index.html / menu.css / menu.js         主菜单
-├── game.html / styles.css / game.js        模式A：塔防与关卡选择
-├── action-levels.html / .css / .js         模式B：关卡选择
-├── action.html / action.css / action.js    模式B：横版格斗主逻辑
-├── action-data.js                          模式B 数值配置
-├── action-logic.js                         模式B 纯逻辑层（无 DOM，可单测）
-├── upgrade.html / .css / .js               奶娃强化系统
-├── tests/                                  Node 内置测试（6 个文件，80 项）
+├── src/                                    全部可运行代码
+│   ├── index.html + css/menu.css + js/menu.js          主菜单
+│   ├── game.html + css/styles.css + js/game.js         模式A：塔防与关卡选择
+│   ├── action-levels.html + .css + .js                 模式B：关卡选择
+│   ├── action.html + css/action.css + js/action.js     模式B：横版格斗主逻辑
+│   ├── js/action-data.js                               模式B 数值配置
+│   ├── js/action-logic.js                              模式B 纯逻辑层（无 DOM，可单测）
+│   ├── js/progress.js                                  唯一存档层（读 / v1 迁移 / 归一化 / 写）
+│   ├── upgrade.html + .css + .js                       奶娃强化系统
+│   └── assets/                                         角色、僵尸、奶娃视频与原始素材
+├── tests/                                  Node 内置测试（10 个文件，132 项）
+│   ├── helpers/browser-env.js              把 src/js 生产脚本载入 Node VM 的 DOM 桩
 │   ├── action-logic.test.js                经验、波次、升级、碰撞几何
+│   ├── action-level-flow.test.js           逐段推进与关卡缩放
+│   ├── boss-settlement.test.js             Boss 作为最后一名敌人的结算
+│   ├── progress-store.test.js              存档层字段归一化与合并
 │   ├── save-migration.test.js              v1 → v2 存档迁移
+│   ├── save-paths.test.js                  跨页面真实存档路径
 │   ├── level-config.test.js                12 关配置
 │   ├── unlock-logic.test.js                解锁规则
 │   ├── upgrade-effects.test.js             强化效果注入
@@ -172,22 +180,21 @@ nailong-vs-zombies/
 ├── AGENTS.md                               AI 代理协作约定
 ├── CHANGELOG.md                            优化记录（每次更新必须追加）
 ├── README.md
-├── 启动游戏.bat                             Windows 双击启动
-└── assets/                                 角色、僵尸、奶娃视频与原始素材
+└── 启动游戏.bat                             Windows 双击启动 src/index.html
 ```
 
 ## 开发与测试
 
 ```bash
-node --test tests/*.test.js     # 80 项单元测试
-node --check game.js            # 逐个 JS 文件做语法检查
+node --test tests/*.test.js          # 132 项单元测试（10 个文件）
+node --check src/js/game.js          # 逐个 JS 文件做语法检查（脚本都在 src/js/）
 ```
 
 改逻辑遵循"先在 `tests/` 写失败用例 → 实现 → 全绿"的顺序；可独立计算的规则放进无 DOM 的纯逻辑模块，页面脚本只做编排与渲染。每次更新必须在 `CHANGELOG.md` 追加记录。详见 [AGENTS.md](AGENTS.md)。
 
 ## 素材说明
 
-奶家人形象由用户提供素材裁切抠图；奶娃静态图与捧腹大笑视频/原声取自用户素材，视频已裁掉手机界面并转为 H.264 / AAC 以提升浏览器兼容性。僵尸为配套生成的原创卡通素材，未直接使用《植物大战僵尸》原游戏素材。`assets/source-*` 是裁切抠图用的原始素材副本，代码不引用但有意保留。
+奶家人形象由用户提供素材裁切抠图；奶娃静态图与捧腹大笑视频/原声取自用户素材，视频已裁掉手机界面并转为 H.264 / AAC 以提升浏览器兼容性。僵尸为配套生成的原创卡通素材，未直接使用《植物大战僵尸》原游戏素材。`src/assets/source-*` 是裁切抠图用的原始素材副本，代码不引用但有意保留。
 
 ## 已知限制
 

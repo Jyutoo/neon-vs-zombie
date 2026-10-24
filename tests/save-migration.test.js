@@ -4,7 +4,7 @@
  *
  * Issue #2 的测试覆盖缺口：本文件过去把 game.js 里的 migrateSaveV1ToV2 /
  * loadProgress 抄了一份进来，生产代码删掉这两个函数后它还在测自己。
- * 现在全部改为驱动真实实现：纯迁移语义走 `require('../progress.js')`
+ * 现在全部改为驱动真实实现：纯迁移语义走 `require('../src/js/progress.js')`
  * （UMD，Node 直接可用），页面消费存档走 `boot()` 加载未经修改的
  * progress.js + game.js。
  *
@@ -13,7 +13,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const ProgressStore = require('../progress.js');
+const ProgressStore = require('../src/js/progress.js');
 const { boot, createStorage } = require('./helpers/browser-env');
 
 const V1 = ProgressStore.V1_SAVE_KEY;

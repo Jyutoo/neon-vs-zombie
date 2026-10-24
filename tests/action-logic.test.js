@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const DATA = require('../action-data.js');
-const L = require('../action-logic.js');
+const DATA = require('../src/js/action-data.js');
+const L = require('../src/js/action-logic.js');
 
 test('xpToNext returns 30 + 20 * (level - 1)', () => {
   assert.equal(L.xpToNext(1), 30);

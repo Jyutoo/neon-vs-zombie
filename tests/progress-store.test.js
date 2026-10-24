@@ -6,7 +6,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const ProgressStore = require('../progress.js');
+const ProgressStore = require('../src/js/progress.js');
 const { createStorage } = require('./helpers/browser-env');
 
 const V1 = ProgressStore.V1_SAVE_KEY;

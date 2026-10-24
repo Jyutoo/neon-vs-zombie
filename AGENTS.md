@@ -6,40 +6,45 @@
 
 纯原生 HTML / CSS / JavaScript 网页游戏合集。**没有构建步骤、没有依赖、没有 `package.json`** —— 所有 `.js` / `.css` 通过 `<script>` / `<link>` 标签直接加载。不要引入框架、打包器或 npm 包，除非用户明确要求。
 
+全部可运行代码在 `src/` 下（页面在 `src/*.html`，样式在 `src/css/`，脚本在 `src/js/`，素材在 `src/assets/`）；仓库根只留 `启动游戏.bat`、三份文档、`tests/` 与 `docs/`。
+
 ## 术语：模式A 与 模式B
 
 | 称呼 | 含义 | 入口 |
 | --- | --- | --- |
-| **模式A** | 塔防（五行九列庭院，放置奶家人） | `game.html` |
-| **模式B** | 横版格斗（操控奶娃清怪与打僵尸王） | `action.html` |
+| **模式A** | 塔防（五行九列庭院，放置奶家人） | `src/game.html` |
+| **模式B** | 横版格斗（操控奶娃清怪与打僵尸王） | `src/action.html` |
 
 用户说"模式A/模式B"时按此对应，不要混淆两套代码。
 
 ## 文件职责
 
 ```
-index.html / menu.css / menu.js      主菜单（三张模式卡 + 奶黄余额横幅）
-progress.js                          唯一存档层（读/迁移/归一化/写），UMD 同时供 Node 测试
-game.html / styles.css / game.js     模式A：塔防主逻辑与关卡选择页
-action.html / action.css / action.js 模式B：横版格斗主逻辑
-action-data.js                       模式B 全部数值配置（玩家/敌人/Boss/升级池/无尽）
-action-logic.js                      模式B 纯逻辑层（无 DOM，可单测）
-action-levels.*                      模式B 关卡选择页
-upgrade.*                            奶娃强化系统（主菜单进入，消耗全局奶黄）
-tests/helpers/browser-env.js         把生产脚本载入 Node VM 的最小 DOM 桩
-tests/*.test.js                      Node 内置测试运行器的用例
-启动游戏.bat                          双击打开 index.html
+src/index.html + src/css/menu.css + src/js/menu.js      主菜单（三张模式卡 + 奶黄余额横幅）
+src/js/progress.js                                      唯一存档层（读/迁移/归一化/写），UMD 同时供 Node 测试
+src/game.html + src/css/styles.css + src/js/game.js     模式A：塔防主逻辑与关卡选择页
+src/action.html + action.css + action.js                模式B：横版格斗主逻辑
+src/js/action-data.js                                   模式B 全部数值配置（玩家/敌人/Boss/升级池/无尽）
+src/js/action-logic.js                                  模式B 纯逻辑层（无 DOM，可单测）
+src/action-levels.*                                     模式B 关卡选择页
+src/upgrade.*                                           奶娃强化系统（主菜单进入，消耗全局奶黄）
+src/assets/                                             角色图与 baby-laugh.mp4；source-* 是抠图源文件
+tests/helpers/browser-env.js                            把 src/js 下生产脚本载入 Node VM 的最小 DOM 桩
+tests/*.test.js                                         Node 内置测试运行器的用例
+启动游戏.bat                                             双击打开 src/index.html
 ```
+
+页面里引用样式与脚本必须带目录前缀（`href="css/menu.css"`、`src="js/progress.js"`）；`assets/` 与页面同级，所以 JS 里动态拼的 `assets/${key}.png` 不需要改前缀。
 
 ## 常用命令
 
 ```bash
 node --test tests/*.test.js          # 全部单元测试（当前 132 项）
-node --check action.js               # 语法检查，改完每个 JS 文件都跑一遍
+node --check src/js/action.js        # 语法检查，改完每个 JS 文件都跑一遍
 "C:/Users/Lenovo/miniconda3/python.exe" -m http.server 4173 --bind 127.0.0.1
 ```
 
-本地服务只用于验证，**用完必须关掉**——残留的 socket 会干扰用户自己的应用。
+本地服务只用于验证，**用完必须关掉**——残留的 socket 会干扰用户自己的应用。起服务后入口是 `http://127.0.0.1:4173/src/index.html`（根路径不再有 `index.html`）。
 
 ## 架构约定
 

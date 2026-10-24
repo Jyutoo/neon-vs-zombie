@@ -20,7 +20,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const ProgressStore = require('../progress.js');
+const ProgressStore = require('../src/js/progress.js');
 const { boot, createStorage } = require('./helpers/browser-env');
 
 const MAX = ProgressStore.MAX_UPGRADE_LEVEL;

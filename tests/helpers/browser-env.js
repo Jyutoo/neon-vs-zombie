@@ -3,8 +3,8 @@
  * Boots the production browser scripts in Node with a minimal DOM shim, so
  * tests can call the real entry points instead of re-implementing them.
  *
- * Files are loaded unmodified. Anything a test needs must already be exported
- * by the production debug handle (window.__nailong and friends).
+ * Files are loaded unmodified from src/js. Anything a test needs must already
+ * be exported by the production debug handle (window.__nailong and friends).
  */
 
 const fs = require('node:fs');
@@ -55,7 +55,7 @@ function createStorage(initial = {}) {
 }
 
 function readFile(name) {
-  return fs.readFileSync(path.join(ROOT, name), 'utf8');
+  return fs.readFileSync(path.join(ROOT, 'src', 'js', name), 'utf8');
 }
 
 // Loads production files, in order, into one shared browser-like global.
