@@ -108,7 +108,8 @@
       bossHpGrowth: 0.3,
       scaling: { hp: 0.08, dmg: 0.05, speed: 0.02, maxSpeedMul: 1.4 }
     },
-    storageKeys: { endlessBest: 'nailong.action.endlessBest' }
+    storageKeys: { endlessBest: 'nailong.action.endlessBest' },
+    saveKey: 'nailong-vs-zombies-progress-v2'
   };
 
   if (typeof module === 'object' && module.exports) module.exports = ACTION_DATA;

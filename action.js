@@ -997,16 +997,18 @@
   }
 
   function finishEndless() {
-    const key = DATA.storageKeys.endlessBest;
+    const saveKey = DATA.saveKey || 'nailong-vs-zombies-progress-v2';
     let newRecord = false;
     try {
-      const best = JSON.parse(localStorage.getItem(key) || 'null');
+      const saveData = JSON.parse(localStorage.getItem(saveKey) || 'null') || {};
+      const best = saveData.endlessBest || { wave: 0, kills: 0, date: null };
       if (!best || state.wave > best.wave) {
-        localStorage.setItem(key, JSON.stringify({
+        saveData.endlessBest = {
           wave: state.wave,
           kills: state.kills,
           date: new Date().toISOString().slice(0, 10)
-        }));
+        };
+        localStorage.setItem(saveKey, JSON.stringify(saveData));
         newRecord = true;
       }
     } catch {}

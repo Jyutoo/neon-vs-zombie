@@ -39,32 +39,88 @@ const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitte
 const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
 const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster', 'pig', 'horse', 'dragon'];
 const UNLOCK_COSTS = { rat: 100, rabbit: 140, dog: 160, tiger: 220, goat: 240, rooster: 260, pig: 280, horse: 320, dragon: 380 };
-const SAVE_KEY = 'nailong-vs-zombies-progress-v1';
+const V1_SAVE_KEY = 'nailong-vs-zombies-progress-v1';
+const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
 const WAVE_COUNT = 5;
 const BASE_WAVE_COUNTS = [3, 4, 6, 8, 10];
 const WAVE_STARTS = [12, 48, 88, 132, 180];
 const WAVE_INTERVALS = [8, 7, 6.5, 6, 5.5];
 
 function defaultProgress() {
-  return { coins: 0, totalEarned: 0, highestCleared: 0, selectedLevel: 1, unlocked: [...STARTING_UNITS] };
+  return {
+    custard: 500,
+    highestCleared: 0,
+    actionHighestCleared: 0,
+    endlessBest: { wave: 0, kills: 0, date: null },
+    selectedLevel: 1,
+    unlocked: [...STARTING_UNITS],
+    upgrades: {
+      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
+      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
+      pig: 0, horse: 0, dog: 0
+    }
+  };
+}
+
+// migrateSaveV1ToV2 — also tested in tests/save-migration.test.js (keep in sync)
+function migrateSaveV1ToV2(v1Data) {
+  if (!v1Data || typeof v1Data !== 'object') v1Data = {};
+  const coins = Math.max(0, Math.floor(Number(v1Data.coins) || 0));
+  const totalEarned = Math.max(coins, Math.floor(Number(v1Data.totalEarned) || 0));
+  const highestCleared = Math.max(0, Math.floor(Number(v1Data.highestCleared) || 0));
+  const validUnits = Object.keys(TYPES);
+  const rawUnlocked = Array.isArray(v1Data.unlocked) ? v1Data.unlocked : [];
+  const unlocked = [...new Set(rawUnlocked.filter(k => validUnits.includes(k)))];
+  STARTING_UNITS.forEach(k => { if (!unlocked.includes(k)) unlocked.push(k); });
+  return {
+    custard: coins,
+    highestCleared,
+    actionHighestCleared: 0,
+    endlessBest: { wave: 0, kills: 0, date: null },
+    selectedLevel: Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(v1Data.selectedLevel) || 1))),
+    unlocked,
+    upgrades: {
+      egg: 0, rat: 0, snake: 0, dragon: 0, rabbit: 0,
+      tiger: 0, ox: 0, monkey: 0, goat: 0, rooster: 0,
+      pig: 0, horse: 0, dog: 0
+    }
+  };
 }
 
 function loadProgress() {
   const fallback = defaultProgress();
+  // Try v2 first
   try {
-    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (!raw || typeof raw !== 'object') return fallback;
-    const valid = Object.keys(TYPES);
-    const unlocked = [...new Set((Array.isArray(raw.unlocked) ? raw.unlocked : []).filter(key => valid.includes(key)))];
-    STARTING_UNITS.forEach(key => { if (!unlocked.includes(key)) unlocked.push(key); });
-    const highestCleared = Math.max(0, Math.floor(Number(raw.highestCleared) || 0));
-    const coins = Math.max(0, Math.floor(Number(raw.coins) || 0));
-    const totalEarned = Math.max(coins, Math.floor(Number(raw.totalEarned) || 0));
-    const selectedLevel = Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(raw.selectedLevel) || 1)));
-    return { coins, totalEarned, highestCleared, selectedLevel, unlocked };
-  } catch {
-    return fallback;
-  }
+    const raw2 = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (raw2 && typeof raw2 === 'object') {
+      // Validate and patch missing fields from defaults
+      const valid = Object.keys(TYPES);
+      const unlocked = [...new Set((Array.isArray(raw2.unlocked) ? raw2.unlocked : []).filter(key => valid.includes(key)))];
+      STARTING_UNITS.forEach(key => { if (!unlocked.includes(key)) unlocked.push(key); });
+      const highestCleared = Math.max(0, Math.floor(Number(raw2.highestCleared) || 0));
+      const custard = Math.max(0, Math.floor(Number(raw2.custard) || 0));
+      const actionHighestCleared = Math.max(0, Math.floor(Number(raw2.actionHighestCleared) || 0));
+      const endlessBest = (raw2.endlessBest && typeof raw2.endlessBest === 'object')
+        ? { wave: Math.max(0, Math.floor(Number(raw2.endlessBest.wave) || 0)), kills: Math.max(0, Math.floor(Number(raw2.endlessBest.kills) || 0)), date: raw2.endlessBest.date || null }
+        : { wave: 0, kills: 0, date: null };
+      const upgrades = (raw2.upgrades && typeof raw2.upgrades === 'object') ? { ...fallback.upgrades, ...raw2.upgrades } : { ...fallback.upgrades };
+      const selectedLevel = Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(raw2.selectedLevel) || 1)));
+      return { custard, highestCleared, actionHighestCleared, endlessBest, selectedLevel, unlocked, upgrades };
+    }
+  } catch {}
+  // Try v1 → migrate
+  try {
+    const raw1 = JSON.parse(localStorage.getItem(V1_SAVE_KEY));
+    if (raw1 && typeof raw1 === 'object') {
+      const migrated = migrateSaveV1ToV2(raw1);
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(migrated));
+        localStorage.removeItem(V1_SAVE_KEY);
+      } catch {}
+      return migrated;
+    }
+  } catch {}
+  return fallback;
 }
 
 function saveProgress() {
@@ -279,7 +335,7 @@ function applyCardLocks() {
     const locked = !isUnlocked(key);
     card.classList.toggle('locked', locked);
     card.setAttribute('aria-disabled', String(locked));
-    card.title = locked ? `通关获得奶币后，在主页面解锁${TYPES[key].name}` : '';
+    card.title = locked ? `通关获得奶黄后，在主页面解锁${TYPES[key].name}` : '';
   });
   $('unitCount').textContent = `可用 ${progress.unlocked.length} / ${Object.keys(TYPES).length}`;
 }
@@ -414,7 +470,7 @@ function showUnitDetail(key) {
     $('unitDetail').innerHTML = `
       <div class="detail-title"><strong>${type.name}</strong><span>${type.role}</span></div>
       <p>${type.description}</p>
-      <div class="detail-stats"><span>未解锁</span><span>主页解锁需 ${UNLOCK_COSTS[key]} 奶币</span></div>`;
+      <div class="detail-stats"><span>未解锁</span><span>主页解锁需 ${UNLOCK_COSTS[key]} 奶黄</span></div>`;
     return;
   }
   $('unitDetail').innerHTML = `
@@ -428,7 +484,7 @@ function selectUnit(key) {
   const type = TYPES[key];
   showUnitDetail(key);
   if (!isUnlocked(key)) {
-    toast(`${type.name}尚未解锁，返回主页用 ${UNLOCK_COSTS[key]} 奶币解锁`);
+    toast(`${type.name}尚未解锁，返回主页用 ${UNLOCK_COSTS[key]} 奶黄解锁`);
     shakeCard(key);
     sound('deny');
     return;
@@ -627,8 +683,8 @@ function maxDisplayLevel() {
 }
 
 function renderHome() {
-  $('homeCoins').textContent = progress.coins;
-  $('homeEarned').textContent = progress.totalEarned;
+  $('homeCoins').textContent = progress.custard;
+  $('homeCleared').textContent = progress.highestCleared;
   $('homeCleared').textContent = progress.highestCleared;
   $('homeUnlocked').textContent = progress.unlocked.length;
   $('homeRosterCount').textContent = progress.unlocked.length;
@@ -722,12 +778,12 @@ function renderRoster() {
         </article>`;
     }
     const cost = UNLOCK_COSTS[key];
-    const affordable = progress.coins >= cost;
+    const affordable = progress.custard >= cost;
     return `
       <article class="roster-card locked" title="${type.description}">
         <img src="assets/${key}.png" alt="${type.name}">
         <div class="roster-copy"><strong>${type.name}</strong><span>${type.role}</span></div>
-        <button class="unlock-button" data-unlock="${key}" ${affordable ? '' : 'disabled'} title="${affordable ? `解锁${type.name}` : `还差 ${cost - progress.coins} 奶币`}">
+        <button class="unlock-button" data-unlock="${key}" ${affordable ? '' : 'disabled'} title="${affordable ? `解锁${type.name}` : `还差 ${cost - progress.custard} 奶黄`}">
           <svg><use href="#i-coin"></use></svg>${cost}
         </button>
       </article>`;
@@ -737,12 +793,12 @@ function renderRoster() {
 function unlockUnit(key) {
   if (!TYPES[key] || isUnlocked(key)) return;
   const cost = UNLOCK_COSTS[key];
-  if (progress.coins < cost) {
-    toast(`还差 ${cost - progress.coins} 奶币，继续通关吧`);
+  if (progress.custard < cost) {
+    toast(`还差 ${cost - progress.custard} 奶黄，继续通关吧`);
     sound('deny');
     return;
   }
-  progress.coins -= cost;
+  progress.custard -= cost;
   progress.unlocked.push(key);
   saveProgress();
   renderHome();
@@ -778,7 +834,7 @@ function showResetConfirm() {
   showModal(`
     <span class="modal-kicker">重置进度</span>
     <h2>重新开始无尽守护？</h2>
-    <p>奶币、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
+    <p>奶黄、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
     <div class="result-actions">
       <button class="secondary-button" id="resetCancel">取消</button>
       <button class="danger-button" id="resetConfirm">确认重置</button>
@@ -1345,8 +1401,7 @@ function finishGame(won) {
   const firstClear = won && level === progress.highestCleared + 1;
   const reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
   if (won) {
-    progress.coins += reward;
-    progress.totalEarned += reward;
+    progress.custard += reward;
     if (firstClear) {
       progress.highestCleared = level;
       progress.selectedLevel = level + 1;
@@ -1355,7 +1410,7 @@ function finishGame(won) {
   }
   renderHome();
   lastResult = {
-    won, level, reward, firstClear, coins: progress.coins,
+    won, level, reward, firstClear, custard: progress.custard,
     kills: game.kills, collected: game.collected, placed: game.placed
   };
   showResult(lastResult);
@@ -1367,16 +1422,16 @@ function showResult(result) {
   const title = won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
   const copy = won
     ? firstClear
-      ? `首次通关第 ${level} 关，奶币已经到账，第 ${level + 1} 关正式解锁。`
+      ? `首次通关第 ${level} 关，奶黄已经到账，第 ${level + 1} 关正式解锁。`
       : `再次守住第 ${level} 关，重复挑战获得首通奖励的 30%。`
-    : `第 ${level} 关防守失败。失败不扣奶币，调整阵容再来一次。`;
+    : `第 ${level} 关防守失败。失败不扣奶黄，调整阵容再来一次。`;
   const rewardBox = won
     ? `<div class="result-reward">
         <svg><use href="#i-coin"></use></svg>
         <div><strong>+${reward}</strong><span>${firstClear ? '首通奖励' : '重复通关 · 30% 奖励'}</span></div>
-        <small>奶币余额 ${result.coins}</small>
+        <small>奶黄余额 ${result.custard}</small>
       </div>`
-    : '<div class="result-reward muted"><span>本局没有奶币奖励 · 失败不扣奶币</span></div>';
+    : '<div class="result-reward muted"><span>本局没有奶黄奖励 · 失败不扣奶黄</span></div>';
   const actions = won
     ? `<div class="result-actions">
         <button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>
@@ -1591,7 +1646,7 @@ function requestHome() {
   pauseBabyPerformances();
   updatePauseButton();
   showModal(`
-    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>本局进度不会保留，奶币与通关记录不受影响。</p>
+    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>本局进度不会保留，奶黄与通关记录不受影响。</p>
     <div class="result-actions"><button class="secondary-button" id="leaveCancel">继续守护</button><button class="danger-button" id="leaveConfirm">返回主页</button></div>`, 'compact');
   $('leaveCancel').addEventListener('click', resumeGame);
   $('leaveConfirm').addEventListener('click', leaveToHome);
@@ -1621,8 +1676,8 @@ function showHelp() {
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
-      <div><strong>关卡与奶币</strong><br>每一关有五波僵尸。首次通关获得全额奶币并解锁下一关；重复挑战旧关卡获得 30% 奶币；失败不扣奶币。</div>
-      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶币解锁，解锁后永久可用。</div>
+      <div><strong>关卡与奶黄</strong><br>每一关有五波僵尸。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
+      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶黄解锁，解锁后永久可用。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
       <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
       <div><strong>僵尸王</strong><br>每 5 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
