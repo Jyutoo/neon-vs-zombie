@@ -55,6 +55,11 @@ let nextId = 1;
 let toastTimer;
 let audioContext;
 const activeBabyVideos = new Set();
+const activeBabyRenderers = new Map();
+const BABY_VIDEO_CROP = { x: 24, y: 82, width: 252, height: 348 };
+const BABY_CANVAS_WIDTH = 176;
+const BABY_CANVAS_HEIGHT = 243;
+let noiseBuffer;
 let lastFrame = performance.now();
 
 const game = {
@@ -359,7 +364,7 @@ function updatePlants(dt) {
   const plantsSnapshot = [...game.plants];
   for (const plant of plantsSnapshot) {
     const type = TYPES[plant.type];
-    plant.timer -= dt;
+    plant.timer = Math.max(0, plant.timer - dt);
     if (plant.type === 'rooster') continue;
     const targets = game.zombies
       .filter(zombie => zombie.row === plant.row && zombie.x >= plant.x - 15 && zombie.x - plant.x <= (type.range ?? Infinity))
@@ -618,24 +623,122 @@ function playBabyVideo(video) {
   });
 }
 
+function keyBabyBackdrop(context, width, height) {
+  const frame = context.getImageData(0, 0, width, height);
+  const pixels = frame.data;
+  const count = width * height;
+  const background = new Uint8Array(count);
+  const visited = new Uint8Array(count);
+  const queue = new Int32Array(count);
+  let head = 0;
+  let tail = 0;
+  // Enclosed belly and teeth stay opaque; only edge-connected or bottom backdrop is dropped.
+  const isBackdrop = index => {
+    const offset = index * 4;
+    return Math.max(255 - pixels[offset], 255 - pixels[offset + 1], 255 - pixels[offset + 2]) <= 70;
+  };
+  const enqueue = index => {
+    if (!visited[index] && isBackdrop(index)) {
+      visited[index] = 1;
+      queue[tail++] = index;
+    }
+  };
+  for (let startIndex = 0; startIndex < count; startIndex++) {
+    if (visited[startIndex] || !isBackdrop(startIndex)) continue;
+    const start = tail;
+    let minY = height;
+    let touchesEdge = false;
+    visited[startIndex] = 1;
+    queue[tail++] = startIndex;
+    while (head < tail) {
+      const index = queue[head++];
+      const x = index % width;
+      const y = (index / width) | 0;
+      if (y < minY) minY = y;
+      if (x === 0 || x === width - 1 || y === 0 || y === height - 1) touchesEdge = true;
+      if (x > 0) enqueue(index - 1);
+      if (x < width - 1) enqueue(index + 1);
+      if (y > 0) enqueue(index - width);
+      if (y < height - 1) enqueue(index + width);
+    }
+    if (touchesEdge || minY > height * .7) {
+      for (let i = start; i < tail; i++) background[queue[i]] = 1;
+    }
+  }
+  for (let index = 0; index < count; index++) {
+    const offset = index * 4;
+    if (background[index]) {
+      pixels[offset + 3] = 0;
+      continue;
+    }
+    const x = index % width;
+    const y = (index / width) | 0;
+    const touchesBackdrop =
+      (x > 0 && background[index - 1]) ||
+      (x < width - 1 && background[index + 1]) ||
+      (y > 0 && background[index - width]) ||
+      (y < height - 1 && background[index + width]);
+    if (!touchesBackdrop) continue;
+    const distance = 255 - Math.min(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+    pixels[offset + 3] = Math.round(255 * Math.min(1, Math.max(.2, (distance - 5) / 40)));
+  }
+  context.putImageData(frame, 0, 0);
+}
+
+function drawBabyFrame(video, canvas, context) {
+  if (video.readyState < 2 || !video.videoWidth) return;
+  const { x, y, width, height } = BABY_VIDEO_CROP;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(video, x, y, width, height, 0, 0, canvas.width, canvas.height);
+  keyBabyBackdrop(context, canvas.width, canvas.height);
+}
+
+function watchBabyPerformance(video, canvas) {
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  let lastTime = -1;
+  let frameId;
+  const renderFrame = () => {
+    if (video.readyState >= 2 && video.currentTime !== lastTime) {
+      lastTime = video.currentTime;
+      drawBabyFrame(video, canvas, context);
+    }
+    frameId = requestAnimationFrame(renderFrame);
+    activeBabyRenderers.set(video, frameId);
+  };
+  frameId = requestAnimationFrame(renderFrame);
+  activeBabyRenderers.set(video, frameId);
+}
+
+function cancelBabyRender(video) {
+  const frameId = activeBabyRenderers.get(video);
+  if (frameId) cancelAnimationFrame(frameId);
+  activeBabyRenderers.delete(video);
+}
+
 function startBabyPerformance(row) {
   const container = document.createElement('div');
   container.className = 'baby-performance';
-  container.style.left = pctX(70);
-  container.style.top = pctY(Math.max(108, Math.min(BOARD_H - 108, yForRow(row))));
+  container.style.left = pctX(62);
+  container.style.top = pctY(yForRow(row));
+  const canvas = document.createElement('canvas');
+  canvas.width = BABY_CANVAS_WIDTH;
+  canvas.height = BABY_CANVAS_HEIGHT;
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', `第 ${row + 1} 行奶娃捧腹大笑`);
   const video = document.createElement('video');
   video.src = 'assets/baby-laugh.mp4';
   video.playsInline = true;
   video.preload = 'auto';
   video.muted = !game.sound;
-  video.setAttribute('aria-label', `第 ${row + 1} 行奶娃捧腹大笑`);
-  container.appendChild(video);
+  container.append(canvas, video);
   $('babyPerformanceLayer').appendChild(container);
   activeBabyVideos.add(video);
   video.addEventListener('ended', () => {
+    cancelBabyRender(video);
     activeBabyVideos.delete(video);
     container.remove();
   }, { once: true });
+  watchBabyPerformance(video, canvas);
   playBabyVideo(video);
 }
 
@@ -651,8 +754,10 @@ function stopBabyPerformances() {
   activeBabyVideos.forEach(video => {
     video.pause();
     video.currentTime = 0;
+    cancelBabyRender(video);
   });
   activeBabyVideos.clear();
+  activeBabyRenderers.clear();
   $('babyPerformanceLayer').innerHTML = '';
 }
 
@@ -665,21 +770,11 @@ function triggerBaby(row, automatic) {
     return;
   }
   baby.used = true;
-  baby.element.classList.add('laughing');
+  baby.element.classList.add('performing');
   baby.element.disabled = true;
-  const laugh = document.createElement('div');
-  laugh.className = 'laugh-wave';
-  laugh.style.top = pctY(yForRow(row));
-  laugh.textContent = '哈哈哈哈！';
-  $('effectLayer').appendChild(laugh);
-  setTimeout(() => laugh.remove(), 950);
   startBabyPerformance(row);
   [...game.zombies].filter(zombie => zombie.row === row).forEach(zombie => damageZombie(zombie, 99999));
   $('statusText').textContent = automatic ? `第 ${row + 1} 行奶娃自动触发大笑，防线已清空` : `第 ${row + 1} 行奶娃捧腹大笑，僵尸全被笑跑了`;
-  setTimeout(() => {
-    baby.element.classList.remove('laughing');
-    baby.element.classList.add('used');
-  }, 750);
   render();
 }
 
@@ -954,6 +1049,38 @@ function tone(frequency, duration, type = 'sine', volume = .025, delay = 0) {
   oscillator.stop(start + duration);
 }
 
+function getNoiseBuffer() {
+  if (noiseBuffer || !audioContext) return noiseBuffer;
+  const length = Math.floor(audioContext.sampleRate * .4);
+  noiseBuffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+  return noiseBuffer;
+}
+
+function noiseBurst({ duration = .07, volume = .03, frequency = 1400, q = .8, delay = 0, type = 'bandpass' } = {}) {
+  if (!game.sound || !audioContext) return;
+  const start = audioContext.currentTime + delay;
+  const source = audioContext.createBufferSource();
+  source.buffer = getNoiseBuffer();
+  const filter = audioContext.createBiquadFilter();
+  filter.type = type;
+  filter.frequency.setValueAtTime(frequency, start);
+  filter.Q.value = q;
+  const gain = audioContext.createGain();
+  gain.gain.setValueAtTime(volume, start);
+  gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+  source.connect(filter).connect(gain).connect(audioContext.destination);
+  source.start(start);
+  source.stop(start + duration + .02);
+}
+
+function pop(volume = .03, pitch = 400, delay = 0, duration = .07) {
+  noiseBurst({ duration: duration * .8, volume, frequency: pitch * 3.2, q: .7, delay });
+  tone(pitch, duration * .8, 'triangle', volume * .8, delay);
+  tone(pitch * .55, duration, 'sine', volume, delay + .012);
+}
+
 function sound(name) {
   if (!game.sound) return;
   const sounds = {
@@ -962,19 +1089,19 @@ function sound(name) {
     plant: () => { tone(220, .09, 'sine'); tone(330, .12, 'sine', .025, .07); },
     collect: () => { tone(660, .1, 'sine'); tone(880, .15, 'sine', .025, .07); },
     produce: () => tone(520, .12, 'sine', .012),
-    throw: () => tone(240, .06, 'triangle', .009),
-    fire: () => tone(120, .18, 'sawtooth', .015),
-    snake: () => { tone(310, .06, 'sawtooth', .011); tone(180, .1, 'triangle', .008, .045); },
-    monkey: () => { tone(700, .035, 'triangle', .008); tone(900, .045, 'triangle', .007, .055); },
-    tiger: () => { tone(190, .07, 'sawtooth', .012); tone(120, .1, 'triangle', .01, .05); },
-    ox: () => { tone(112, .17, 'sawtooth', .012); tone(82, .2, 'triangle', .01, .09); },
-    goat: () => { tone(500, .06, 'square', .008); tone(410, .09, 'square', .009, .07); },
-    horse: () => { tone(250, .08, 'sawtooth', .011); tone(370, .12, 'triangle', .009, .07); },
-    impact: () => tone(110, .045, 'square', .007),
-    hit: () => tone(95, .09, 'triangle', .018),
-    bite: () => tone(85, .06, 'sawtooth', .006),
+    throw: () => { pop(.032, 340, 0, .065); pop(.018, 470, .05, .045); },
+    fire: () => { noiseBurst({ duration: .18, volume: .026, frequency: 820, q: .5, type: 'lowpass' }); tone(145, .18, 'sawtooth', .018); tone(82, .2, 'sine', .015, .035); },
+    snake: () => { pop(.032, 300, 0, .08); noiseBurst({ duration: .11, volume: .022, frequency: 2300, q: 1.1, delay: .015, type: 'highpass' }); tone(210, .1, 'triangle', .014, .03); },
+    monkey: () => { pop(.028, 520, 0, .055); pop(.024, 700, .055, .05); },
+    tiger: () => { pop(.025, 180, 0, .09); tone(190, .07, 'sawtooth', .013); tone(110, .1, 'triangle', .012, .045); },
+    ox: () => { noiseBurst({ duration: .09, volume: .022, frequency: 300, q: .7, type: 'lowpass' }); tone(112, .17, 'sawtooth', .015); tone(82, .2, 'triangle', .013, .08); },
+    goat: () => { pop(.026, 380, 0, .07); tone(500, .06, 'square', .011); tone(410, .09, 'square', .012, .065); },
+    horse: () => { noiseBurst({ duration: .1, volume: .022, frequency: 900, q: .6 }); tone(250, .08, 'sawtooth', .014); tone(370, .12, 'triangle', .012, .06); },
+    impact: () => { noiseBurst({ duration: .035, volume: .012, frequency: 900, q: .8 }); tone(110, .045, 'square', .009); },
+    hit: () => { noiseBurst({ duration: .045, volume: .016, frequency: 650, q: .8 }); tone(95, .09, 'triangle', .018); },
+    bite: () => { noiseBurst({ duration: .035, volume: .01, frequency: 420, q: .7 }); tone(85, .06, 'sawtooth', .007); },
     heal: () => { tone(520, .15, 'sine', .015); tone(690, .18, 'sine', .015, .08); },
-    bark: () => { tone(180, .08, 'square', .012); tone(140, .1, 'square', .012, .1); },
+    bark: () => { pop(.02, 240, 0, .06); tone(180, .08, 'square', .013); tone(140, .1, 'square', .013, .1); },
     shovel: () => tone(190, .12, 'triangle'),
     wave: () => { tone(220, .18, 'triangle'); tone(330, .2, 'triangle', .025, .13); },
     start: () => { tone(330, .12); tone(440, .12, 'sine', .025, .1); tone(660, .2, 'sine', .025, .2); },

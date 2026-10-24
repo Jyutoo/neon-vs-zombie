@@ -173,11 +173,10 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .baby-button:hover img { filter: drop-shadow(0 0 8px #fff7a8) drop-shadow(0 5px 3px #41451f40); transform: scale(1.08) rotate(-3deg); }
 .baby-button::after { content: "点击大笑"; position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); white-space: nowrap; padding: 2px 5px; border-radius: 6px; font-size: 8px; color: #735f24; background: rgba(255,248,189,.85); opacity: 0; transition: opacity .2s; }
 .baby-button:hover::after { opacity: 1; }
-.baby-button.laughing { animation: babyLaugh .16s ease-in-out 5 alternate; }
-.baby-button.used { opacity: 0; transform: translate(-50%,-50%) scale(.4) rotate(20deg); transition: .45s ease; }
-.baby-performance { position: absolute; width: 12.5%; aspect-ratio: 296 / 460; transform: translate(-50%,-50%); border-radius: 16px; background: #fff; border: 3px solid #fff7b8; box-shadow: 0 10px 28px rgba(70,57,20,.3), 0 0 0 5px rgba(255,218,75,.18); overflow: hidden; animation: babyPerformanceIn .35s ease-out; }
-.baby-performance video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.baby-performance::after { content: "捧腹大笑"; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); padding: 3px 9px; border-radius: 999px; color: #765013; background: rgba(255,246,180,.92); font-size: 10px; font-weight: 900; white-space: nowrap; }
+.baby-button.performing { visibility: hidden; }
+.baby-performance { position: absolute; width: 9%; height: 19%; transform: translate(-50%,-50%); pointer-events: none; background: transparent; }
+.baby-performance canvas { position: absolute; left: 50%; top: 50%; width: auto; height: 100%; transform: translate(-50%,-50%); filter: drop-shadow(0 5px 3px rgba(65,65,30,.25)); }
+.baby-performance video { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .projectile { position: absolute; width: 2.5%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; }
 .projectile.rock { background: radial-gradient(circle at 30% 25%, #c4b69c, #796b58 70%); box-shadow: 1px 3px 3px #37412d45; }
 .projectile.rock::after { content: ""; position: absolute; width: 35%; height: 25%; left: 20%; top: 20%; background: #e0d6c1; border-radius: 50%; opacity: .55; }
@@ -194,7 +193,6 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .combat-text { position: absolute; transform: translate(-50%,-50%); color: #fff6ad; font-size: 18px; font-weight: 900; text-shadow: 0 2px 3px #7c491f; animation: floatText .75s ease-out forwards; white-space: nowrap; }
 .combat-text.heal { color: #d7ffb9; text-shadow: 0 2px 3px #3c762d; }
 .combat-text.damage { color: #fff; font-size: 13px; }
-.laugh-wave { position: absolute; left: 4%; width: 92%; height: 18%; transform: translateY(-50%); display: grid; place-items: center; color: #fff9a8; font-size: clamp(22px, 3.5vw, 50px); font-weight: 900; letter-spacing: 12px; text-shadow: 0 4px 0 #e4a634, 0 7px 12px #73571980; background: radial-gradient(ellipse, rgba(255,240,102,.45), transparent 67%); animation: laughWave .9s ease-out forwards; }
 .slash-effect { position: absolute; width: 8%; height: 15%; transform: translate(-50%,-50%); border: 5px solid #fff2a2; border-left-color: transparent; border-bottom-color: transparent; border-radius: 50%; animation: slashOut .35s ease-out forwards; }
 .charge-effect { position: absolute; height: 12%; transform: translateY(-50%); background: linear-gradient(90deg, transparent, rgba(255,244,155,.7), transparent); clip-path: polygon(0 40%, 100% 0, 90% 50%, 100% 100%, 0 60%); animation: chargeOut .4s ease-out forwards; }
 .dirt-burst { position: absolute; width: 8%; height: 12%; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(109,89,42,.35), transparent 65%); animation: dirtOut .5s ease-out forwards; }
@@ -251,11 +249,8 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 @keyframes plantAttack { 0% { transform: scale(1); } 45% { transform: scale(.88,1.08) translateX(5px); } 100% { transform: scale(1); } }
 @keyframes zombieWalk { from { transform: rotate(-2deg) translateY(0); } to { transform: rotate(2deg) translateY(-3px); } }
 @keyframes zombieEat { from { transform: rotate(0) translateX(0); } to { transform: rotate(-5deg) translateX(-5px); } }
-@keyframes babyLaugh { from { transform: translate(-50%,-50%) rotate(-7deg); } to { transform: translate(-50%,-50%) rotate(7deg); } }
-@keyframes babyPerformanceIn { from { opacity: 0; transform: translate(-50%,-50%) scale(.45) rotate(-6deg); } to { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0); } }
 @keyframes custardPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.15); } }
 @keyframes floatText { 0% { opacity: 0; margin-top: 8px; } 20% { opacity: 1; } 100% { opacity: 0; margin-top: -35px; } }
-@keyframes laughWave { 0% { opacity: 0; transform: translateY(-50%) scale(.4); } 25% { opacity: 1; transform: translateY(-50%) scale(1.05); } 100% { opacity: 0; transform: translateY(-50%) scale(1.25); } }
 @keyframes slashOut { from { opacity: 1; transform: translate(-50%,-50%) rotate(-30deg) scale(.5); } to { opacity: 0; transform: translate(-50%,-50%) rotate(70deg) scale(1.4); } }
 @keyframes chargeOut { from { opacity: 1; transform: translateY(-50%) scaleX(.3); } to { opacity: 0; transform: translateY(-50%) scaleX(1.1); } }
 @keyframes dirtOut { from { opacity: 1; transform: translate(-50%,-50%) scale(.3); } to { opacity: 0; transform: translate(-50%,-50%) scale(1.5); } }
