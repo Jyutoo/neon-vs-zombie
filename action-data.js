@@ -44,7 +44,6 @@
         maxHp: 100,
         speed: 300,
         attackDamageMul: 1,
-        attackSpeedMul: 1,
         heavyDamageMul: 1,
         heavyKnockbackMul: 1,
         fireDamageMul: 1,
@@ -85,7 +84,6 @@
     },
     upgrades: [
       { id: 'power', name: '奶香重拳', desc: '普攻伤害 +20%', apply: { attackDamageMul: 1.2 } },
-      { id: 'swift', name: '疾风连击', desc: '普攻攻速 +12%', apply: { attackSpeedMul: 1.12 } },
       { id: 'ironhead', name: '铁头功', desc: '重击伤害 +30%，击退 +25%', apply: { heavyDamageMul: 1.3, heavyKnockbackMul: 1.25 } },
       { id: 'breath', name: '音波强化', desc: '音波伤害 +30%', apply: { fireDamageMul: 1.3 } },
       { id: 'deepbreath', name: '深呼吸', desc: '音波冷却 -20%', apply: { fireCooldownMul: 0.8 } },

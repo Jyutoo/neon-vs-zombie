@@ -2,6 +2,13 @@
   const DATA = window.ACTION_DATA;
   const Logic = window.ActionLogic;
 
+  const PLAYER_BODY_HEIGHT = 128;
+  const ENEMY_BODY_HEIGHT = 118;
+  const enemyBodyHeight = enemy => ENEMY_BODY_HEIGHT * enemy.cfg.scale;
+  const FIRE_MOUTH_OFFSET = 70;
+  const FIRE_BAND_HEIGHT = 92;
+  const FIRE_BACK_TOLERANCE = 20;
+
   const stage = document.getElementById('stage');
   const world = document.getElementById('world');
   const parallax = Array.from(document.querySelectorAll('.parallax'));
@@ -259,9 +266,9 @@
     const p = state.player;
     return {
       x: p.facing > 0 ? p.x + 6 : p.x - range - 6,
-      y: p.y - 128,
+      y: p.y - PLAYER_BODY_HEIGHT,
       w: range,
-      h: 128
+      h: PLAYER_BODY_HEIGHT
     };
   }
 
@@ -376,7 +383,7 @@
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0 || p.hitIds.has(enemy.id)) continue;
       const width = 68 * enemy.cfg.scale;
-      const height = 118 * enemy.cfg.scale;
+      const height = enemyBodyHeight(enemy);
       const body = { x: enemy.x - width / 2, y: enemy.y - height, w: width, h: height };
       if (!Logic.rectsOverlap(box, body)) continue;
       p.hitIds.add(enemy.id);
@@ -435,18 +442,25 @@
   function resolveFireBreath() {
     const p = state.player;
     const fire = DATA.player.fire;
+    const box = {
+      x: p.facing > 0 ? p.x - FIRE_BACK_TOLERANCE : p.x - fire.range - FIRE_BACK_TOLERANCE,
+      y: p.y - FIRE_MOUTH_OFFSET - FIRE_BAND_HEIGHT / 2,
+      w: fire.range + FIRE_BACK_TOLERANCE,
+      h: FIRE_BAND_HEIGHT
+    };
     for (const enemy of [...state.enemies]) {
       if (enemy.hp <= 0) continue;
-      const dx = enemy.x - p.x;
-      if (Math.abs(dx) > fire.range) continue;
-      if (Math.sign(dx) !== p.facing && Math.abs(dx) > 20) continue;
+      const width = 68 * enemy.cfg.scale;
+      const height = enemyBodyHeight(enemy);
+      const body = { x: enemy.x - width / 2, y: enemy.y - height, w: width, h: height };
+      if (!Logic.rectsOverlap(box, body)) continue;
       damageEnemy(enemy, fire.damage * state.stats.fireDamageMul, 30, p.facing);
       if (enemy.hp > 0) {
         enemy.burnUntil = state.time + fire.burnSeconds;
         enemy.burnTick = state.time + 1;
       }
     }
-    spawnEffect('', p.x + p.facing * (fire.range / 2), p.y - 70, 'fire-breath', fire.range);
+    spawnEffect('', p.x + p.facing * (fire.range / 2), p.y - FIRE_MOUTH_OFFSET, 'fire-breath', fire.range);
   }
 
   function updatePlayerAction(dt) {
@@ -691,7 +705,9 @@
       boss.state = 'charge';
       boss.x += DATA.boss.charge.speed * boss.facing * dt;
       boss.x = Math.max(bounds.min, Math.min(bounds.max, boss.x));
-      if (!boss.chargeDamageDone && Math.abs(boss.x - state.player.x) < 90) {
+      if (!boss.chargeDamageDone
+          && Math.abs(boss.x - state.player.x) < 90
+          && Logic.verticalOverlap(state.player.y, PLAYER_BODY_HEIGHT, boss.y, enemyBodyHeight(boss))) {
         boss.chargeDamageDone = true;
         hurtPlayer(DATA.boss.charge.damage);
         state.shake = Math.max(state.shake, 0.3);
@@ -775,7 +791,9 @@
     if (enemy.state === 'windup') {
       enemy.windup -= dt;
       if (enemy.windup <= 0) {
-        if (Math.abs(p.x - enemy.x) <= enemy.cfg.range + 12) hurtPlayer(enemy.cfg.damage);
+        const inReach = Math.abs(p.x - enemy.x) <= enemy.cfg.range + 12
+          && Logic.verticalOverlap(p.y, PLAYER_BODY_HEIGHT, enemy.y, enemyBodyHeight(enemy));
+        if (inReach) hurtPlayer(enemy.cfg.damage);
         enemy.windup = enemy.cfg.windup;
         enemy.cooldown = enemy.cfg.interval;
         enemy.state = 'idle';

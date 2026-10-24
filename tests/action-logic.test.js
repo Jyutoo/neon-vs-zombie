@@ -57,3 +57,27 @@ test('clampCamera keeps camera inside world', () => {
   assert.equal(L.clampCamera(2000, 5120, 1280), 2000);
   assert.equal(L.clampCamera(5000, 5120, 1280), 3840);
 });
+
+test('attack pool has no attack-speed option', () => {
+  assert.equal(DATA.upgrades.some(u => u.id === 'swift'), false);
+  assert.equal(DATA.upgrades.some(u => (u.apply || {}).attackSpeedMul), false);
+});
+
+test('verticalOverlap: grounded bodies overlap, airborne body is out of reach', () => {
+  const ground = DATA.arena.groundY;
+  const playerH = 128;
+  const zombieH = 118;
+  assert.equal(L.verticalOverlap(ground, playerH, ground, zombieH), true);
+  const jumpPeak = ground - 138;
+  assert.equal(L.verticalOverlap(jumpPeak, playerH, ground, zombieH), false);
+  assert.equal(L.verticalOverlap(ground - 50, playerH, ground, zombieH), true);
+});
+
+test('verticalOverlap: airborne boss is out of grounded player reach', () => {
+  const ground = DATA.arena.groundY;
+  const playerH = 128;
+  const bossH = 118 * DATA.boss.scale;
+  const bossPeak = ground - DATA.boss.slam.jumpHeight;
+  assert.equal(L.verticalOverlap(bossPeak, bossH, ground, playerH), false);
+  assert.equal(L.verticalOverlap(ground, bossH, ground, playerH), true);
+});

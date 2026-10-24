@@ -1,7 +1,7 @@
 (function (root) {
   function createLogic(DATA) {
     const MULTIPLIER_KEYS = [
-      'attackDamageMul', 'attackSpeedMul', 'heavyDamageMul', 'heavyKnockbackMul',
+      'attackDamageMul', 'heavyDamageMul', 'heavyKnockbackMul',
       'fireDamageMul', 'fireCooldownMul', 'moveSpeedMul', 'diveDamageMul', 'diveRangeMul',
       'dashCooldownMul', 'thirdHitRangeMul', 'thirdHitDamageMul'
     ];
@@ -60,11 +60,16 @@
       return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     }
 
+    // Foot-based Y: a body spans [footY - height, footY].
+    function verticalOverlap(aFootY, aHeight, bFootY, bHeight) {
+      return aFootY > bFootY - bHeight && aFootY - aHeight < bFootY;
+    }
+
     function clampCamera(targetX, worldWidth, viewWidth) {
       return Math.max(0, Math.min(targetX, worldWidth - viewWidth));
     }
 
-    return { xpToNext, waveConfig, applyUpgrade, rollUpgrades, scaleEnemy, rectsOverlap, clampCamera };
+    return { xpToNext, waveConfig, applyUpgrade, rollUpgrades, scaleEnemy, rectsOverlap, verticalOverlap, clampCamera };
   }
 
   if (typeof module === 'object' && module.exports) module.exports = createLogic(require('./action-data.js'));
