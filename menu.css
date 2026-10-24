@@ -79,6 +79,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(239, 180, 48, .8
 .menu-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 36px; color: #6d8366; font-size: 13px; }
 .text-button { border: 0; background: transparent; color: #4f7048; font-weight: 800; cursor: pointer; padding: 8px 4px; border-bottom: 2px solid transparent; }
 .text-button:hover { border-bottom-color: #7fae5a; }
+.upgrade-entry { text-decoration: none; color: #b8860b; font-weight: 800; }
+.upgrade-entry:hover { border-bottom-color: #b8860b; color: #9a7209; }
 
 .modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(36, 55, 34, .45); backdrop-filter: blur(6px); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s ease; }
 .modal.visible { opacity: 1; visibility: visible; }
