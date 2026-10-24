@@ -7,34 +7,38 @@ const ROWS = 5;
 const COLS = 9;
 
 const TYPES = {
-  egg: { name: '奶蛋', role: '奶黄生产', cost: 50, hp: 160, cooldown: 4, rate: 8, description: '每隔 8 秒生成 25 奶黄，是阵容发展的基础。' },
-  rat: { name: '奶鼠', role: '远程投石', cost: 100, hp: 190, cooldown: 4, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的僵尸丢石头，稳定单体输出。' },
-  snake: { name: '奶蛇', role: '毒液持续伤害', cost: 75, hp: 160, cooldown: 6, rate: 1.7, damage: 16, range: Infinity, projectile: 'glob', description: '喷出毒液，命中后造成 4 秒持续毒伤。' },
-  dragon: { name: '奶龙', role: '范围火焰', cost: 175, hp: 280, cooldown: 10, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近僵尸造成范围伤害。' },
-  rabbit: { name: '奶兔', role: '群体治疗', cost: 75, hp: 170, cooldown: 8, rate: 3, description: '每 3 秒治疗自身及周围八格的奶家人 24 点耐久。' },
-  tiger: { name: '奶虎', role: '近战爆发', cost: 150, hp: 330, cooldown: 8, rate: .85, damage: 75, range: 100, description: '近距离猛击僵尸，出手快、单次伤害高。' },
-  ox: { name: '奶牛', role: '高耐久防线', cost: 75, hp: 900, cooldown: 10, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住僵尸并近身顶撞。' },
-  monkey: { name: '奶猴', role: '双目标攻击', cost: 125, hp: 200, cooldown: 7, rate: 1.4, damage: 24, range: Infinity, projectile: 'seed', description: '灵活投掷果核，每次同时攻击本行两个目标。' },
-  goat: { name: '奶羊', role: '击退控制', cost: 125, hp: 250, cooldown: 8, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退僵尸，争取更多输出时间。' },
-  horse: { name: '奶马', role: '冲锋突击', cost: 150, hp: 250, cooldown: 9, rate: 3.4, damage: 65, range: 310, description: '向远处僵尸发起冲锋，造成高伤害并将其撞退。' },
-  rooster: { name: '奶鸡', role: '攻速增益', cost: 100, hp: 180, cooldown: 9, rate: 0, description: '晨鸣助威，使本行其他奶家人的攻击速度提高 25%。' },
-  pig: { name: '奶猪', role: '奶黄寻宝', cost: 125, hp: 280, cooldown: 8, rate: 13, description: '每 13 秒拱出 25 奶黄，耐久比奶蛋更高。' },
-  dog: { name: '奶狗', role: '减速守卫', cost: 100, hp: 260, cooldown: 7, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行僵尸减速；僵尸靠近时会直接撕咬。' }
+  egg: { name: '奶蛋', role: '奶黄生产', cost: 60, hp: 160, cooldown: 4, rate: 12, produce: 20, description: '每隔 12 秒生成 20 奶黄，需要更谨慎地规划阵容。' },
+  rat: { name: '奶鼠', role: '远程投石', cost: 120, hp: 190, cooldown: 4, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的僵尸丢石头，稳定单体输出。' },
+  snake: { name: '奶蛇', role: '毒液持续伤害', cost: 90, hp: 160, cooldown: 6, rate: 1.7, damage: 16, range: Infinity, projectile: 'glob', description: '喷出毒液，命中后造成 4 秒持续毒伤。' },
+  dragon: { name: '奶龙', role: '范围火焰', cost: 210, hp: 280, cooldown: 10, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近僵尸造成范围伤害。' },
+  rabbit: { name: '奶兔', role: '群体治疗', cost: 90, hp: 170, cooldown: 8, rate: 3, description: '每 3 秒治疗自身及周围八格的奶家人 24 点耐久。' },
+  tiger: { name: '奶虎', role: '近战爆发', cost: 180, hp: 330, cooldown: 8, rate: .85, damage: 75, range: 100, description: '近距离猛击僵尸，出手快、单次伤害高。' },
+  ox: { name: '奶牛', role: '高耐久防线', cost: 90, hp: 900, cooldown: 10, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住僵尸并近身顶撞。' },
+  monkey: { name: '奶猴', role: '双目标攻击', cost: 150, hp: 200, cooldown: 7, rate: 1.4, damage: 24, range: Infinity, projectile: 'seed', description: '灵活投掷果核，每次同时攻击本行两个目标。' },
+  goat: { name: '奶羊', role: '击退控制', cost: 150, hp: 250, cooldown: 8, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退僵尸，争取更多输出时间。' },
+  horse: { name: '奶马', role: '冲锋突击', cost: 180, hp: 250, cooldown: 9, rate: 3.4, damage: 65, range: 310, description: '向远处僵尸发起冲锋，造成高伤害并将其撞退。' },
+  rooster: { name: '奶鸡', role: '攻速增益', cost: 120, hp: 180, cooldown: 9, rate: 0, description: '晨鸣助威，使本行其他奶家人的攻击速度提高 25%。' },
+  pig: { name: '奶猪', role: '奶黄寻宝', cost: 150, hp: 280, cooldown: 8, rate: 13, produce: 25, description: '每 13 秒拱出 25 奶黄，耐久比奶蛋更高。' },
+  dog: { name: '奶狗', role: '减速守卫', cost: 120, hp: 260, cooldown: 7, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行僵尸减速；僵尸靠近时会直接撕咬。' }
 };
 
 const ZOMBIES = {
-  basic: { hp: 150, speed: 12, bite: 24 },
-  cone: { hp: 260, speed: 12, bite: 27 },
-  bucket: { hp: 420, speed: 10, bite: 31 },
-  runner: { hp: 125, speed: 18, bite: 22 }
+  basic: { name: '普通僵尸', hp: 190, speed: 12, bite: 24 },
+  cone: { name: '路障僵尸', hp: 325, speed: 12, bite: 27 },
+  bucket: { name: '铁桶僵尸', hp: 525, speed: 10, bite: 31 },
+  runner: { name: '快速僵尸', hp: 155, speed: 18, bite: 22 },
+  brute: { name: '大块头僵尸', hp: 1100, speed: 6, bite: 60 },
+  spitter: { name: '远程僵尸', hp: 260, speed: 9, bite: 24, range: 340, rate: 2.8, damage: 35 },
+  jumper: { name: '跳跃僵尸', hp: 190, speed: 22, bite: 26 },
+  boss: { name: '僵尸王', hp: 4200, speed: 4.2, bite: 70 }
 };
 
 const LEVEL = [
   { start: 10, interval: 8, types: ['basic', 'basic', 'basic', 'cone'] },
-  { start: 46, interval: 7, types: ['basic', 'cone', 'basic', 'basic', 'cone', 'basic'] },
-  { start: 88, interval: 6, types: ['runner', 'basic', 'cone', 'basic', 'runner', 'cone', 'basic'] },
-  { start: 132, interval: 5.5, types: ['cone', 'basic', 'bucket', 'runner', 'basic', 'cone', 'basic', 'bucket'] },
-  { start: 178, interval: 4.5, types: ['runner', 'cone', 'basic', 'bucket', 'basic', 'cone', 'runner', 'bucket', 'basic', 'cone'] }
+  { start: 46, interval: 7, types: ['basic', 'cone', 'jumper', 'basic', 'cone', 'basic', 'basic'] },
+  { start: 88, interval: 6, types: ['runner', 'spitter', 'cone', 'basic', 'jumper', 'runner', 'cone', 'basic'] },
+  { start: 132, interval: 5.5, types: ['cone', 'brute', 'bucket', 'spitter', 'basic', 'jumper', 'runner', 'cone', 'bucket'] },
+  { start: 178, interval: 4.5, types: ['runner', 'cone', 'brute', 'bucket', 'spitter', 'jumper', 'cone', 'brute', 'spitter', 'bucket', 'runner', 'boss'] }
 ];
 
 const $ = id => document.getElementById(id);
@@ -42,13 +46,15 @@ const layers = {
   plants: $('plantLayer'),
   zombies: $('zombieLayer'),
   projectiles: $('projectileLayer'),
+  enemyProjectiles: $('enemyProjectileLayer'),
   custards: $('custardLayer')
 };
-const entityDom = { plants: new Map(), zombies: new Map(), projectiles: new Map(), custards: new Map() };
+const entityDom = { plants: new Map(), zombies: new Map(), projectiles: new Map(), enemyProjectiles: new Map(), custards: new Map() };
 const cardDom = new Map();
 let nextId = 1;
 let toastTimer;
 let audioContext;
+const activeBabyVideos = new Set();
 let lastFrame = performance.now();
 
 const game = {
@@ -60,6 +66,7 @@ const game = {
   plants: [],
   zombies: [],
   projectiles: [],
+  enemyProjectiles: [],
   custards: [],
   babies: [],
   cooldowns: {},
@@ -223,11 +230,13 @@ function resetGame(autostart = true) {
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
     time: 0, custard: 150, speed: 1,
-    plants: [], zombies: [], projectiles: [], custards: [], babies: [],
+    plants: [], zombies: [], projectiles: [], enemyProjectiles: [], custards: [], babies: [],
     selected: null, queue: buildQueue(), spawned: 0, kills: 0,
-    collected: 0, placed: 0, wave: -1, naturalTimer: 5
+    collected: 0, placed: 0, wave: -1, naturalTimer: 5,
+    total: LEVEL.reduce((sum, wave) => sum + wave.types.length, 0)
   });
   Object.keys(game.cooldowns).forEach(key => game.cooldowns[key] = 0);
+  stopBabyPerformances();
   $('babyLayer').innerHTML = '';
   $('effectLayer').innerHTML = '';
   for (let row = 0; row < ROWS; row++) {
@@ -235,7 +244,7 @@ function resetGame(autostart = true) {
     baby.element.className = 'baby-button';
     baby.element.style.left = pctX(62);
     baby.element.style.top = pctY(yForRow(row));
-    baby.element.innerHTML = `<img src="assets/baby.png" alt="第 ${row + 1} 行奶娃">`;
+    baby.element.innerHTML = `<img src="assets/baby-glance.png" alt="第 ${row + 1} 行奶娃">`;
     baby.element.title = '点击让奶娃捧腹大笑，清空本行僵尸';
     baby.element.addEventListener('click', () => triggerBaby(row, false));
     $('babyLayer').appendChild(baby.element);
@@ -255,27 +264,33 @@ function startGame() {
   resetGame(true);
   initAudio();
   sound('start');
-  toast('先种奶蛋和奶鼠，第一批僵尸即将出现');
+  toast('先种奶蛋，收集奶黄后布置攻击角色');
 }
 
-function spawnZombie(type, row = Math.floor(Math.random() * ROWS)) {
+function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = false) {
   const config = ZOMBIES[type];
   game.zombies.push({
     id: nextId++, type, row,
     x: 1050 + randomBetween(0, 25), y: yForRow(row),
     hp: config.hp, maxHp: config.hp,
     speed: config.speed, bite: config.bite,
-    biteTimer: .4, eating: false,
-    poisonUntil: 0, poisonTick: 0, slowUntil: 0
+    biteTimer: .4, attackTimer: .8, eating: false,
+    poisonUntil: 0, poisonTick: 0, slowUntil: 0,
+    jumped: false, skillCount: 0, nextSkill: game.time + 5, enraged: false
   });
   game.spawned++;
+  if (summoned) game.total++;
+  if (type === 'boss') {
+    announce('僵尸王来了！');
+    sound('wave');
+  }
 }
 
-function spawnCustard(x, y, falling = false) {
+function spawnCustard(x, y, falling = false, value = 25) {
   game.custards.push({
     id: nextId++, x, y: falling ? 15 : y,
     targetY: falling ? y : y - 16,
-    life: 12, falling, collected: false
+    life: 12, falling, collected: false, value
   });
 }
 
@@ -284,8 +299,8 @@ function collectCustard(id) {
   const drop = game.custards.find(item => item.id === id);
   if (!drop) return;
   game.custards = game.custards.filter(item => item.id !== id);
-  game.custard += 25;
-  game.collected += 25;
+  game.custard += drop.value;
+  game.collected += drop.value;
   $('resourcePill').classList.remove('bump');
   void $('resourcePill').offsetWidth;
   $('resourcePill').classList.add('bump');
@@ -307,6 +322,7 @@ function update(dt) {
   updateCustards(dt);
   updatePlants(dt);
   updateProjectiles(dt);
+  updateEnemyProjectiles(dt);
   updateZombies(dt);
   if (!game.queue.length && !game.zombies.length && game.state === 'running') finishGame(true);
 }
@@ -349,7 +365,7 @@ function updatePlants(dt) {
       .sort((a, b) => a.x - b.x);
     if (plant.type === 'egg' || plant.type === 'pig') {
       if (plant.timer <= 0) {
-        spawnCustard(plant.x, plant.y, false);
+        spawnCustard(plant.x, plant.y, false, type.produce);
         plant.timer += type.rate;
         animateEntity('plants', plant.id, 'attacking', 300);
         sound('produce');
@@ -443,6 +459,68 @@ function updateProjectiles(dt) {
   game.projectiles = game.projectiles.filter(projectile => active.has(projectile.id));
 }
 
+function spawnEnemyProjectile(zombie, target, kind = 'acid') {
+  const bossShot = kind === 'boss-rock';
+  game.enemyProjectiles.push({
+    id: nextId++, kind, targetId: target.id,
+    x: zombie.x - 25, y: zombie.y - 30,
+    speed: bossShot ? 230 : 280,
+    damage: bossShot ? 80 : ZOMBIES.spitter.damage
+  });
+  spawnEffect(bossShot ? '巨石！' : '腐蚀液！', zombie.x, zombie.y - 65, 'combat-text damage');
+  sound(bossShot ? 'fire' : 'throw');
+}
+
+function updateEnemyProjectiles(dt) {
+  const active = new Set();
+  for (const projectile of game.enemyProjectiles) {
+    const target = game.plants.find(plant => plant.id === projectile.targetId);
+    if (!target) continue;
+    const dx = target.x - projectile.x;
+    const dy = target.y - 20 - projectile.y;
+    const distance = Math.hypot(dx, dy);
+    const step = projectile.speed * dt;
+    if (distance <= step + 22) {
+      damagePlant(target, projectile.damage);
+      spawnEffect(`-${projectile.damage}`, target.x, target.y - 35, 'combat-text damage');
+      sound('impact');
+    } else {
+      projectile.x += dx / distance * step;
+      projectile.y += dy / distance * step;
+      active.add(projectile.id);
+    }
+  }
+  game.enemyProjectiles = game.enemyProjectiles.filter(projectile => active.has(projectile.id));
+}
+
+function damagePlant(plant, amount) {
+  if (!game.plants.includes(plant)) return;
+  plant.hp -= amount;
+  animateEntity('plants', plant.id, 'hurt', 180);
+  if (plant.hp <= 0) removePlant(plant);
+}
+
+function updateBossSkill(zombie) {
+  if (!zombie.enraged && zombie.hp <= zombie.maxHp * .4) {
+    zombie.enraged = true;
+    announce('僵尸王暴怒！');
+    spawnEffect('暴怒！', zombie.x, zombie.y - 80, 'combat-text damage');
+  }
+  if (game.time < zombie.nextSkill) return;
+  if (zombie.skillCount % 2 === 0 || !game.plants.length) {
+    const summonType = zombie.skillCount % 4 === 0 ? 'runner' : 'basic';
+    spawnZombie(summonType, (zombie.row + 1) % ROWS, true);
+    spawnZombie(summonType, (zombie.row + ROWS - 1) % ROWS, true);
+    spawnEffect('召唤援军！', zombie.x, zombie.y - 80, 'combat-text damage');
+    sound('wave');
+  } else {
+    const target = game.plants[Math.floor(Math.random() * game.plants.length)];
+    spawnEnemyProjectile(zombie, target, 'boss-rock');
+  }
+  zombie.skillCount++;
+  zombie.nextSkill = game.time + (zombie.enraged ? 4.2 : 7);
+}
+
 function updateZombies(dt) {
   for (const zombie of [...game.zombies]) {
     if (zombie.poisonUntil > game.time && game.time >= zombie.poisonTick) {
@@ -450,26 +528,44 @@ function updateZombies(dt) {
       damageZombie(zombie, 4);
       if (!game.zombies.includes(zombie)) continue;
     }
+    if (zombie.type === 'boss') updateBossSkill(zombie);
     const blockers = game.plants
       .filter(plant => plant.row === zombie.row && zombie.x - plant.x < 48 && zombie.x - plant.x > -22)
       .sort((a, b) => b.x - a.x);
     const blocker = blockers[0];
-    zombie.eating = Boolean(blocker);
-    if (blocker) {
+    const jumped = zombie.type === 'jumper' && blocker && !zombie.jumped;
+    const rangedTarget = zombie.type === 'spitter' && !blocker ? game.plants
+      .filter(plant => plant.row === zombie.row && plant.x < zombie.x && zombie.x - plant.x <= ZOMBIES.spitter.range)
+      .sort((a, b) => b.x - a.x)[0] : null;
+    zombie.eating = Boolean(blocker) && !jumped;
+    if (jumped) {
+      zombie.jumped = true;
+      zombie.x = Math.max(35, blocker.x - 65);
+      spawnEffect('跳过！', zombie.x, zombie.y - 45, 'combat-text damage');
+      sound('throw');
+    } else if (rangedTarget) {
+      zombie.attackTimer -= dt;
+      if (zombie.attackTimer <= 0) {
+        spawnEnemyProjectile(zombie, rangedTarget);
+        zombie.attackTimer += ZOMBIES.spitter.rate;
+      }
+    } else if (blocker) {
       zombie.biteTimer -= dt;
       if (zombie.biteTimer <= 0) {
-        blocker.hp -= zombie.bite;
+        damagePlant(blocker, zombie.bite);
         zombie.biteTimer += .85;
-        animateEntity('plants', blocker.id, 'hurt', 180);
-        sound('bite');
-        if (blocker.hp <= 0) {
-          removePlant(blocker);
-          zombie.eating = false;
+        if (zombie.type === 'brute') {
+          game.plants.filter(plant => plant.id !== blocker.id && plant.row === blocker.row && Math.abs(plant.x - blocker.x) <= 100)
+            .forEach(plant => damagePlant(plant, 25));
+          spawnEffect('重击！', blocker.x, blocker.y - 40, 'combat-text damage');
         }
+        sound('bite');
+        if (!game.plants.includes(blocker)) zombie.eating = false;
       }
     } else {
       const slowed = zombie.slowUntil > game.time;
-      zombie.x -= zombie.speed * (slowed ? .55 : 1) * dt;
+      const enraged = zombie.type === 'boss' && zombie.enraged ? 1.45 : 1;
+      zombie.x -= zombie.speed * (slowed ? .55 : 1) * enraged * dt;
     }
     const baby = game.babies[zombie.row];
     if (zombie.x < 122 && baby && !baby.used) triggerBaby(zombie.row, true);
@@ -493,6 +589,53 @@ function removePlant(plant) {
   spawnEffect('', plant.x, plant.y + 25, 'dirt-burst');
 }
 
+function playBabyVideo(video) {
+  if (game.state !== 'running') return;
+  video.play().catch(() => {
+    video.muted = true;
+    video.play().catch(() => {});
+    if (game.sound) toast('浏览器阻止了原声，本次以静音播放');
+  });
+}
+
+function startBabyPerformance(row) {
+  const container = document.createElement('div');
+  container.className = 'baby-performance';
+  container.style.left = pctX(500);
+  container.style.top = pctY(Math.max(108, Math.min(BOARD_H - 108, yForRow(row))));
+  const video = document.createElement('video');
+  video.src = 'assets/baby-laugh.mp4';
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.muted = !game.sound;
+  video.setAttribute('aria-label', `第 ${row + 1} 行奶娃捧腹大笑`);
+  container.appendChild(video);
+  $('babyPerformanceLayer').appendChild(container);
+  activeBabyVideos.add(video);
+  video.addEventListener('ended', () => {
+    activeBabyVideos.delete(video);
+    container.remove();
+  }, { once: true });
+  playBabyVideo(video);
+}
+
+function pauseBabyPerformances() {
+  activeBabyVideos.forEach(video => video.pause());
+}
+
+function resumeBabyPerformances() {
+  activeBabyVideos.forEach(playBabyVideo);
+}
+
+function stopBabyPerformances() {
+  activeBabyVideos.forEach(video => {
+    video.pause();
+    video.currentTime = 0;
+  });
+  activeBabyVideos.clear();
+  $('babyPerformanceLayer').innerHTML = '';
+}
+
 function triggerBaby(row, automatic) {
   if (game.state !== 'running') return;
   const baby = game.babies[row];
@@ -510,8 +653,8 @@ function triggerBaby(row, automatic) {
   laugh.textContent = '哈哈哈哈！';
   $('effectLayer').appendChild(laugh);
   setTimeout(() => laugh.remove(), 950);
+  startBabyPerformance(row);
   [...game.zombies].filter(zombie => zombie.row === row).forEach(zombie => damageZombie(zombie, 99999));
-  sound('laugh');
   $('statusText').textContent = automatic ? `第 ${row + 1} 行奶娃自动触发大笑，防线已清空` : `第 ${row + 1} 行奶娃捧腹大笑，僵尸全被笑跑了`;
   setTimeout(() => {
     baby.element.classList.remove('laughing');
@@ -524,6 +667,7 @@ function finishGame(won) {
   if (game.state !== 'running') return;
   game.state = won ? 'won' : 'lost';
   game.selected = null;
+  stopBabyPerformances();
   updatePauseButton();
   sound(won ? 'win' : 'lose');
   const title = won ? '小院守住了！' : '僵尸闯进奶家了';
@@ -585,12 +729,15 @@ function render() {
   syncCollection('zombies', game.zombies, zombie => {
     const element = document.createElement('div');
     element.className = `entity zombie ${zombie.type}`;
-    element.innerHTML = `<div class="armor"></div><img src="assets/zombie.png" alt="僵尸"><div class="health-track"><div class="health-fill"></div></div>`;
+    element.innerHTML = `<div class="armor"></div><img src="assets/zombie.png" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
     setEntityPosition(element, zombie);
     return element;
   }, (element, zombie) => {
     setEntityPosition(element, zombie);
+    if (zombie.type === 'boss') element.style.top = pctY(Math.max(110, Math.min(BOARD_H - 110, zombie.y)));
+    if (zombie.type === 'brute') element.style.top = pctY(Math.max(85, Math.min(BOARD_H - 85, zombie.y)));
     element.classList.toggle('eating', zombie.eating);
+    element.classList.toggle('enraged', zombie.enraged);
     updateHealth(element, zombie);
   });
 
@@ -600,11 +747,17 @@ function render() {
     return element;
   }, setEntityPosition);
 
+  syncCollection('enemyProjectiles', game.enemyProjectiles, projectile => {
+    const element = document.createElement('div');
+    element.className = `enemy-projectile ${projectile.kind}`;
+    return element;
+  }, setEntityPosition);
+
   syncCollection('custards', game.custards, drop => {
     const element = document.createElement('button');
     element.className = 'custard-drop';
-    element.title = '收集 25 奶黄';
-    element.innerHTML = '<svg><use href="#i-custard"></use></svg><span>25</span>';
+    element.title = `收集 ${drop.value} 奶黄`;
+    element.innerHTML = `<svg><use href="#i-custard"></use></svg><span>${drop.value}</span>`;
     element.addEventListener('click', event => {
       event.stopPropagation();
       collectCustard(drop.id);
@@ -616,6 +769,12 @@ function render() {
   $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${LEVEL.length} 波`;
   $('levelProgress').style.width = `${game.kills / game.total * 100}%`;
   $('progressText').textContent = `${game.kills} / ${game.total}`;
+  const boss = game.zombies.find(zombie => zombie.type === 'boss');
+  $('bossHud').classList.toggle('visible', Boolean(boss));
+  if (boss) {
+    $('bossHealthFill').style.width = `${Math.max(0, boss.hp / boss.maxHp * 100)}%`;
+    $('bossPhase').textContent = boss.enraged ? '暴怒：加速移动 · 技能更频繁' : '召唤援军 · 远程压制';
+  }
   updateCards();
 }
 
@@ -695,6 +854,7 @@ function showStart() {
 function togglePause() {
   if (game.state === 'running') {
     game.state = 'paused';
+    pauseBabyPerformances();
     updatePauseButton();
     showModal(`
       <span class="modal-kicker">休息一下</span><h2>游戏已暂停</h2><p>奶家人和僵尸都在原地等你。</p>
@@ -711,6 +871,7 @@ function resumeGame() {
   game.state = 'running';
   hideModal();
   updatePauseButton();
+  resumeBabyPerformances();
   lastFrame = performance.now();
 }
 
@@ -721,7 +882,10 @@ function updatePauseButton() {
 
 function showHelp() {
   const previous = game.state;
-  if (previous === 'running') game.state = 'paused';
+  if (previous === 'running') {
+    game.state = 'paused';
+    pauseBabyPerformances();
+  }
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
@@ -741,7 +905,10 @@ function showHelp() {
       if (game.state === 'paused') {
         game.state = 'running';
         togglePause();
-      } else hideModal();
+      } else {
+        hideModal();
+        resumeBabyPerformances();
+      }
     }
     updatePauseButton();
     lastFrame = performance.now();
@@ -785,7 +952,6 @@ function sound(name) {
     shovel: () => tone(190, .12, 'triangle'),
     wave: () => { tone(220, .18, 'triangle'); tone(330, .2, 'triangle', .025, .13); },
     start: () => { tone(330, .12); tone(440, .12, 'sine', .025, .1); tone(660, .2, 'sine', .025, .2); },
-    laugh: () => [0, .1, .2, .3, .4].forEach((delay, i) => tone(i % 2 ? 500 : 650, .1, 'square', .018, delay)),
     win: () => [523, 659, 784, 1047].forEach((freq, i) => tone(freq, .3, 'sine', .025, i * .13)),
     lose: () => [300, 240, 180].forEach((freq, i) => tone(freq, .3, 'triangle', .025, i * .18))
   };
@@ -820,6 +986,7 @@ $('speedButton').addEventListener('click', () => {
 $('soundButton').addEventListener('click', () => {
   game.sound = !game.sound;
   if (game.sound) initAudio();
+  activeBabyVideos.forEach(video => { video.muted = !game.sound; });
   $('soundButton').innerHTML = `<svg><use href="#i-${game.sound ? 'sound' : 'muted'}"></use></svg>`;
   $('soundButton').title = game.sound ? '关闭声音' : '打开声音';
 });

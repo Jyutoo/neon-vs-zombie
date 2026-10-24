@@ -66,7 +66,7 @@
         <div class="level-strip glass-panel">
           <div class="wave-copy"><span class="eyebrow">守护进度</span><strong id="waveLabel">第 1 / 5 波</strong></div>
           <div class="progress-track"><div id="levelProgress" class="progress-fill"></div><span id="progressText">0 / 35</span></div>
-          <div class="zombie-legend"><span class="legend-dot basic"></span>普通<span class="legend-dot cone"></span>路障<span class="legend-dot bucket"></span>铁桶</div>
+          <div class="zombie-legend"><span class="legend-dot basic"></span>普通<span class="legend-dot cone"></span>路障<span class="legend-dot bucket"></span>铁桶<span class="legend-dot brute"></span>大块头<span class="legend-dot spitter"></span>远程<span class="legend-dot jumper"></span>跳跃<span class="legend-dot boss"></span>僵尸王</div>
         </div>
 
         <div class="board-frame">
@@ -79,8 +79,14 @@
             <div id="plantLayer" class="entity-layer"></div>
             <div id="projectileLayer" class="entity-layer"></div>
             <div id="zombieLayer" class="entity-layer"></div>
+            <div id="enemyProjectileLayer" class="entity-layer"></div>
+            <div id="babyPerformanceLayer" class="entity-layer"></div>
             <div id="custardLayer" class="entity-layer"></div>
             <div id="effectLayer" class="entity-layer"></div>
+            <div id="bossHud" class="boss-hud">
+              <div><strong>僵尸王</strong><span id="bossPhase">召唤援军 · 远程压制</span></div>
+              <div class="boss-health-track"><div id="bossHealthFill"></div></div>
+            </div>
             <div id="waveBanner" class="wave-banner"></div>
           </div>
         </div>
