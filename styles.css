@@ -68,12 +68,14 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .panel-heading h2 { font-size: 18px; margin: 0; }
 .unit-count { font-size: 11px; font-weight: 800; color: #69815f; background: #e9f2df; padding: 5px 8px; border-radius: 10px; }
 .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-.unit-card { height: 65px; position: relative; overflow: hidden; border: 1px solid #dfe8d3; border-radius: 14px; background: linear-gradient(145deg, #fffef7, #edf3df); cursor: pointer; color: var(--ink); padding: 5px 5px 5px 52px; text-align: left; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.unit-card { height: 65px; position: relative; overflow: hidden; border: 1px solid #dfe8d3; border-radius: 14px; background: linear-gradient(145deg, #fffef7, #edf3df); cursor: grab; color: var(--ink); padding: 5px 5px 5px 52px; text-align: left; touch-action: none; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .unit-card:hover { transform: translateY(-2px); border-color: #b6cb98; box-shadow: 0 5px 12px #536b4320; z-index: 2; }
+.unit-card.dragging { cursor: grabbing; border-color: #e8ad2d; box-shadow: 0 0 0 2px #ffd964, 0 10px 18px #b6933033; transform: translateY(2px) scale(.97); }
+.unit-card.dragging img { opacity: .35; }
 .unit-card.selected { border-color: #e8ad2d; box-shadow: 0 0 0 2px #ffd964, 0 6px 12px #b6933030; background: linear-gradient(145deg, #fffceb, #ffeaa0); }
 .unit-card.unaffordable { filter: saturate(.55); }
 .unit-card.unaffordable .card-cost { color: #b85c4a; }
-.unit-card img { position: absolute; left: 2px; bottom: 2px; width: 49px; height: 55px; object-fit: contain; filter: drop-shadow(0 3px 2px #7c71352b); }
+.unit-card img { position: absolute; left: 2px; bottom: 2px; width: 49px; height: 55px; object-fit: contain; filter: drop-shadow(0 3px 2px #7c71352b); -webkit-user-drag: none; }
 .card-name { display: block; font-size: 12px; font-weight: 900; white-space: nowrap; }
 .card-role { display: block; font-size: 9px; color: #809071; margin-top: 2px; white-space: nowrap; }
 .card-cost { display: inline-flex; align-items: center; gap: 2px; margin-top: 3px; font-size: 11px; font-weight: 900; color: #9a6b15; }
@@ -124,8 +126,18 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .cell:hover { background: rgba(255,249,176,.22); box-shadow: inset 0 0 0 2px rgba(255,255,211,.45); }
 .cell.valid { background: rgba(255,245,139,.22); }
 .cell.invalid { cursor: not-allowed; }
+.cell.drop-valid { background: rgba(255,245,139,.42); box-shadow: inset 0 0 0 3px #ffe86f, inset 0 0 22px #fff8a0; z-index: 2; cursor: copy; }
+.cell.drop-invalid { background: rgba(214,100,73,.25); box-shadow: inset 0 0 0 3px #d97758; cursor: not-allowed; }
 .cell-preview { position: absolute; inset: 6%; width: 88%; height: 88%; object-fit: contain; opacity: 0; pointer-events: none; filter: saturate(.8); }
 .cell:hover .cell-preview.visible { opacity: .48; }
+.drag-ghost { position: fixed; z-index: 300; width: 86px; height: 96px; transform: translate(-50%, -68%); pointer-events: none; opacity: .96; filter: drop-shadow(0 10px 8px #2e45204d); transition: opacity .12s, filter .12s; }
+.drag-ghost img { width: 100%; height: 100%; object-fit: contain; animation: dragFloat .8s ease-in-out infinite alternate; }
+.drag-ghost::after { content: ""; position: absolute; left: 50%; bottom: -2px; width: 58%; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(48,68,35,.3), transparent 70%); }
+.drag-ghost.invalid { opacity: .55; filter: grayscale(.75) drop-shadow(0 8px 6px #5b30204d); }
+.drag-ghost.invalid::before { content: attr(data-hint); position: absolute; left: 50%; bottom: -19px; transform: translateX(-50%); white-space: nowrap; padding: 2px 7px; border-radius: 7px; background: #8d3f2f; color: #fff4d8; font-size: 9px; font-weight: 900; box-shadow: 0 3px 8px #4c241c40; }
+body.is-card-dragging { cursor: grabbing; }
+body.is-card-dragging .cell { cursor: copy; }
+body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .entity-layer { position: absolute; inset: 0; pointer-events: none; }
 #babyLayer { z-index: 4; }
 #plantLayer { z-index: 5; }
@@ -168,6 +180,10 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .zombie.boss .armor { display: block; width: 56%; height: 26%; left: 24%; top: -10%; background: linear-gradient(135deg,#ffe172,#b87524); clip-path: polygon(0 100%,0 20%,25% 58%,40% 0,60% 58%,83% 5%,100% 100%); filter: drop-shadow(0 3px 2px #6b351c66); }
 .zombie.boss > img { filter: saturate(.75) brightness(.72) drop-shadow(0 0 8px rgba(183,52,39,.65)); }
 .zombie.boss.enraged > img { filter: saturate(1.25) brightness(.82) drop-shadow(0 0 12px #e33f28); }
+.zombie.dying { z-index: 0; }
+.zombie.dying > img { animation: zombieFall var(--death-duration, 850ms) cubic-bezier(.34,.02,.66,1) forwards; transform-origin: 50% 92%; }
+.zombie.dying .armor, .zombie.dying::before { animation: deathFade calc(var(--death-duration, 850ms) * .55) ease forwards; }
+.zombie.dying .health-track { opacity: 0; }
 .baby-button { position: absolute; width: 9%; height: 19%; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto; }
 .baby-button img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 5px 3px rgba(65,65,30,.25)); transition: filter .2s, transform .2s; }
 .baby-button:hover img { filter: drop-shadow(0 0 8px #fff7a8) drop-shadow(0 5px 3px #41451f40); transform: scale(1.08) rotate(-3deg); }
@@ -249,6 +265,14 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 @keyframes plantAttack { 0% { transform: scale(1); } 45% { transform: scale(.88,1.08) translateX(5px); } 100% { transform: scale(1); } }
 @keyframes zombieWalk { from { transform: rotate(-2deg) translateY(0); } to { transform: rotate(2deg) translateY(-3px); } }
 @keyframes zombieEat { from { transform: rotate(0) translateX(0); } to { transform: rotate(-5deg) translateX(-5px); } }
+@keyframes zombieFall {
+  0% { transform: rotate(0deg) translate(0, 0); opacity: 1; }
+  16% { transform: rotate(calc(var(--fall-tilt, 78deg) * -.13)) translate(0, -3%); opacity: 1; }
+  72% { transform: rotate(var(--fall-tilt, 78deg)) translate(-15%, 9%); opacity: .9; }
+  100% { transform: rotate(var(--fall-tilt, 78deg)) translate(-21%, 15%); opacity: 0; }
+}
+@keyframes deathFade { to { opacity: 0; } }
+@keyframes dragFloat { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
 @keyframes custardPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.15); } }
 @keyframes floatText { 0% { opacity: 0; margin-top: 8px; } 20% { opacity: 1; } 100% { opacity: 0; margin-top: -35px; } }
 @keyframes slashOut { from { opacity: 1; transform: translate(-50%,-50%) rotate(-30deg) scale(.5); } to { opacity: 0; transform: translate(-50%,-50%) rotate(70deg) scale(1.4); } }

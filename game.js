@@ -33,6 +33,9 @@ const ZOMBIES = {
   boss: { name: '僵尸王', hp: 4200, speed: 3.8, bite: 70 }
 };
 
+const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
+const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitter: 850, jumper: 850, brute: 1050, boss: 1400 };
+
 const LEVEL = [
   { start: 10, interval: 8, types: ['basic', 'basic', 'basic', 'cone'] },
   { start: 46, interval: 7, types: ['basic', 'cone', 'jumper', 'basic', 'cone', 'basic', 'basic'] },
@@ -61,6 +64,9 @@ const BABY_CANVAS_WIDTH = 176;
 const BABY_CANVAS_HEIGHT = 243;
 let noiseBuffer;
 let lastFrame = performance.now();
+let cardPress = null;
+let dragState = null;
+let dragClickUntil = 0;
 
 const game = {
   state: 'ready',
@@ -99,6 +105,12 @@ function yForRow(row) { return row * ROW_H + ROW_H / 2; }
 function pctX(x) { return `${x / BOARD_W * 100}%`; }
 function pctY(y) { return `${y / BOARD_H * 100}%`; }
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
+function zombieOccupiesRow(zombie, row) {
+  return zombie.row === row || (zombie.type === 'boss' && zombie.row + 1 === row);
+}
+function zombieLaneRows(zombie) {
+  return zombie.type === 'boss' ? [zombie.row, zombie.row + 1] : [zombie.row];
+}
 
 function initGrid() {
   for (let row = 0; row < ROWS; row++) {
@@ -126,19 +138,150 @@ function initCards() {
     card.className = 'unit-card';
     card.dataset.type = key;
     card.innerHTML = `
-      <img src="assets/${key}.png" alt="${type.name}">
+      <img src="assets/${key}.png" alt="${type.name}" draggable="false">
       <span class="card-name">${type.name}</span>
       <span class="card-role">${type.role}</span>
       <span class="card-cost">${type.cost}</span>
       <span class="cooldown-mask"></span>
       <span class="cooldown-text"></span>`;
-    card.addEventListener('click', () => selectUnit(key));
-    card.addEventListener('mouseenter', () => showUnitDetail(key));
+    card.addEventListener('pointerdown', event => beginCardPress(event, key, card));
+    card.addEventListener('click', () => {
+      if (performance.now() < dragClickUntil) return;
+      selectUnit(key);
+    });
+    card.addEventListener('dragstart', event => event.preventDefault());
+    card.addEventListener('mouseenter', () => {
+      if (!dragState) showUnitDetail(key);
+    });
     $('cardGrid').appendChild(card);
     cardDom.set(key, card);
     game.cooldowns[key] = 0;
   });
 }
+
+function beginCardPress(event, key, card) {
+  if (event.button !== 0 || event.isPrimary === false || game.state !== 'running') return;
+  cardPress = { key, card, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
+}
+
+function startCardDrag(event) {
+  if (!cardPress || game.state !== 'running') return cancelCardDrag();
+  const { key, card } = cardPress;
+  const type = TYPES[key];
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.innerHTML = `<img src="assets/${key}.png" alt="" draggable="false">`;
+  document.body.appendChild(ghost);
+  document.body.classList.add('is-card-dragging');
+  card.classList.add('dragging');
+  game.selected = null;
+  $('shovelButton').classList.remove('selected');
+  showUnitDetail(key);
+  updateCards();
+  $('statusText').textContent = `拖动${type.name}到空草地，松手即可种植`;
+  sound('select');
+  dragState = { ...cardPress, active: true, ghost, cell: null, row: -1, col: -1, valid: false, issue: '' };
+  updateCardDrag(event);
+}
+
+function cellFromPoint(clientX, clientY) {
+  const grid = $('grid');
+  const rect = grid.getBoundingClientRect();
+  if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+  const col = Math.min(COLS - 1, Math.max(0, Math.floor((clientX - rect.left) / rect.width * COLS)));
+  const row = Math.min(ROWS - 1, Math.max(0, Math.floor((clientY - rect.top) / rect.height * ROWS)));
+  return { row, col, cell: grid.children[row * COLS + col] };
+}
+
+function clearDropHighlights() {
+  document.querySelectorAll('.cell.drop-valid, .cell.drop-invalid').forEach(cell => {
+    cell.classList.remove('drop-valid', 'drop-invalid');
+  });
+}
+
+function updateCardDrag(event) {
+  if (!dragState) return;
+  dragState.ghost.style.left = `${event.clientX}px`;
+  dragState.ghost.style.top = `${event.clientY}px`;
+  const target = cellFromPoint(event.clientX, event.clientY);
+  clearDropHighlights();
+  dragState.cell = target?.cell || null;
+  dragState.row = target?.row ?? -1;
+  dragState.col = target?.col ?? -1;
+  if (!target) {
+    dragState.valid = false;
+    dragState.issue = '拖到草地上才能种植';
+    dragState.deny = false;
+  } else {
+    const problem = placementProblem(dragState.key, target.row, target.col);
+    dragState.valid = !problem;
+    dragState.issue = problem?.message || '';
+    dragState.deny = Boolean(problem?.deny);
+    target.cell.classList.add(problem ? 'drop-invalid' : 'drop-valid');
+  }
+  dragState.ghost.classList.toggle('invalid', !dragState.valid);
+  dragState.ghost.dataset.hint = dragState.valid ? '' : dragState.issue;
+}
+
+function finishCardDrag(event) {
+  if (!dragState) return;
+  updateCardDrag(event);
+  const finished = dragState;
+  dragState = null;
+  cardPress = null;
+  dragClickUntil = performance.now() + 250;
+  finished.ghost.remove();
+  finished.card.classList.remove('dragging');
+  document.body.classList.remove('is-card-dragging');
+  clearDropHighlights();
+  if (finished.valid) {
+    placeUnit(finished.key, finished.row, finished.col);
+  } else {
+    toast(finished.issue || '这里不能种植');
+    if (finished.deny) {
+      shakeCard(finished.key);
+      sound('deny');
+    }
+    $('statusText').textContent = '拖动卡牌到空草地即可种植';
+  }
+  updateCards();
+}
+
+function cancelCardDrag() {
+  if (dragState) {
+    dragState.ghost.remove();
+    dragState.card.classList.remove('dragging');
+    clearDropHighlights();
+    dragClickUntil = performance.now() + 250;
+  }
+  dragState = null;
+  cardPress = null;
+  document.body.classList.remove('is-card-dragging');
+  updateCards();
+}
+
+window.addEventListener('pointermove', event => {
+  if (!cardPress) return;
+  if (event.pointerId !== cardPress.pointerId) return;
+  if (!dragState) {
+    if (Math.hypot(event.clientX - cardPress.startX, event.clientY - cardPress.startY) < 6) return;
+    startCardDrag(event);
+  }
+  event.preventDefault();
+  updateCardDrag(event);
+}, { passive: false });
+window.addEventListener('pointerup', event => {
+  if (!cardPress || event.pointerId !== cardPress.pointerId) return;
+  if (dragState) finishCardDrag(event);
+  else cardPress = null;
+});
+window.addEventListener('pointercancel', () => cancelCardDrag());
+window.addEventListener('blur', () => cancelCardDrag());
+document.addEventListener('click', event => {
+  if (performance.now() >= dragClickUntil) return;
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
 
 function showUnitDetail(key) {
   const type = TYPES[key];
@@ -164,7 +307,7 @@ function selectUnit(key) {
   }
   game.selected = game.selected === key ? null : key;
   $('shovelButton').classList.remove('selected');
-  $('statusText').textContent = game.selected ? `已选择${type.name}，点击一块空草地放置` : '已取消选择';
+  $('statusText').textContent = game.selected ? `已选择${type.name}，拖到草地或点击空格放置` : '已取消选择';
   sound('select');
   updateCards();
 }
@@ -186,9 +329,52 @@ function updateCellPreview(cell, row, col) {
   }
 }
 
+function placementProblem(key, row, col) {
+  if (game.state !== 'running') return { message: '游戏暂停中，先继续游戏吧' };
+  const type = TYPES[key];
+  if (plantAt(row, col)) return { message: '这里已经有奶家人了' };
+  if (game.cooldowns[key] > 0) {
+    return { message: `${type.name}还在休息，${Math.ceil(game.cooldowns[key])} 秒后可用`, deny: true };
+  }
+  if (game.custard < type.cost) {
+    return { message: `奶黄不足，还需要 ${type.cost - game.custard}`, deny: true };
+  }
+  return null;
+}
+
+function placeUnit(key, row, col) {
+  const problem = placementProblem(key, row, col);
+  if (problem) {
+    toast(problem.message);
+    if (problem.deny) {
+      shakeCard(key);
+      sound('deny');
+    }
+    return false;
+  }
+  const type = TYPES[key];
+  game.custard -= type.cost;
+  game.cooldowns[key] = type.cooldown;
+  game.placed++;
+  game.plants.push({
+    id: nextId++, type: key, row, col,
+    x: xForCol(col), y: yForRow(row),
+    hp: type.hp, maxHp: type.hp,
+    timer: key === 'egg' || key === 'pig' ? 4 : .35
+  });
+  game.selected = null;
+  $('shovelButton').classList.remove('selected');
+  $('statusText').textContent = `${type.name}已就位，继续布置防线吧`;
+  spawnEffect('', xForCol(col), yForRow(row) + 30, 'dirt-burst');
+  sound('plant');
+  render();
+  return true;
+}
+
 function useCell(row, col) {
+  if (performance.now() < dragClickUntil) return;
   if (game.state !== 'running' || !game.selected) {
-    if (game.state === 'running') toast('先选择一张奶家人卡牌');
+    if (game.state === 'running') toast('拖动卡牌到空草地即可种植');
     return;
   }
   const existing = plantAt(row, col);
@@ -201,29 +387,7 @@ function useCell(row, col) {
     sound('shovel');
     return;
   }
-  const key = game.selected;
-  const type = TYPES[key];
-  if (existing) return toast('这里已经有奶家人了');
-  if (game.cooldowns[key] > 0) return toast('卡牌仍在冷却');
-  if (game.custard < type.cost) {
-    game.selected = null;
-    updateCards();
-    return toast('奶黄不足，先收集一些奶黄吧');
-  }
-  game.custard -= type.cost;
-  game.cooldowns[key] = type.cooldown;
-  game.placed++;
-  game.plants.push({
-    id: nextId++, type: key, row, col,
-    x: xForCol(col), y: yForRow(row),
-    hp: type.hp, maxHp: type.hp,
-    timer: key === 'egg' || key === 'pig' ? 4 : .35
-  });
-  game.selected = null;
-  $('statusText').textContent = `${type.name}已就位，继续布置防线吧`;
-  spawnEffect('', xForCol(col), yForRow(row) + 30, 'dirt-burst');
-  sound('plant');
-  render();
+  placeUnit(game.selected, row, col);
 }
 
 function plantAt(row, col) {
@@ -232,6 +396,8 @@ function plantAt(row, col) {
 
 function resetGame(autostart = true) {
   nextId = 1;
+  cancelCardDrag();
+  dragClickUntil = 0;
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
     time: 0, custard: 150, speed: 1,
@@ -250,7 +416,7 @@ function resetGame(autostart = true) {
     baby.element.style.left = pctX(62);
     baby.element.style.top = pctY(yForRow(row));
     baby.element.innerHTML = `<img src="assets/baby-glance.png" alt="第 ${row + 1} 行奶娃">`;
-    baby.element.title = '点击让奶娃捧腹大笑，清空本行僵尸';
+    baby.element.title = '点击让奶娃捧腹大笑：击倒普通僵尸并重创大怪';
     baby.element.addEventListener('click', () => triggerBaby(row, false));
     $('babyLayer').appendChild(baby.element);
     game.babies.push(baby);
@@ -274,15 +440,18 @@ function startGame() {
 
 function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = false) {
   const config = ZOMBIES[type];
+  if (type === 'boss') row = Math.min(row, ROWS - 2);
   game.zombies.push({
     id: nextId++, type, row,
-    x: 1050 + randomBetween(0, 25), y: yForRow(row),
+    x: 1050 + randomBetween(0, 25),
+    y: type === 'boss' ? (row + 1) * ROW_H : yForRow(row),
     hp: config.hp, maxHp: config.hp,
     speed: config.speed, bite: config.bite,
     biteTimer: .4, attackTimer: .8, eating: false,
     poisonUntil: 0, poisonTick: 0, slowUntil: 0,
     jumped: false, skillCount: 0, nextSkill: game.time + 5, enraged: false,
-    knockbackProtected: false, knockbackGraceUntil: 0
+    knockbackProtected: false, knockbackGraceUntil: 0,
+    dying: false, deathAt: 0, fallTilt: 0
   });
   game.spawned++;
   if (summoned) game.total++;
@@ -367,7 +536,7 @@ function updatePlants(dt) {
     plant.timer = Math.max(0, plant.timer - dt);
     if (plant.type === 'rooster') continue;
     const targets = game.zombies
-      .filter(zombie => zombie.row === plant.row && zombie.x >= plant.x - 15 && zombie.x - plant.x <= (type.range ?? Infinity))
+      .filter(zombie => !zombie.dying && zombieOccupiesRow(zombie, plant.row) && zombie.x >= plant.x - 15 && zombie.x - plant.x <= (type.range ?? Infinity))
       .sort((a, b) => a.x - b.x);
     if (plant.type === 'egg' || plant.type === 'pig') {
       if (plant.timer <= 0) {
@@ -394,12 +563,12 @@ function updatePlants(dt) {
       continue;
     }
     if (plant.type === 'dog') {
-      if (plant.timer <= 0 && (targets.length || game.zombies.some(z => z.row === plant.row))) {
+      if (plant.timer <= 0 && (targets.length || game.zombies.some(z => !z.dying && zombieOccupiesRow(z, plant.row)))) {
         if (targets.length && targets[0].x - plant.x <= type.range) {
           damageZombie(targets[0], type.damage);
           spawnEffect('嗷呜', plant.x + 45, plant.y - 30, 'combat-text');
         } else {
-          game.zombies.filter(z => z.row === plant.row).forEach(z => z.slowUntil = game.time + 4);
+          game.zombies.filter(z => !z.dying && zombieOccupiesRow(z, plant.row)).forEach(z => z.slowUntil = game.time + 4);
           spawnEffect('汪汪！减速', plant.x + 60, plant.y - 25, 'combat-text');
         }
         plant.timer += attackRate(plant, type.rate);
@@ -453,8 +622,10 @@ function updateProjectiles(dt) {
   const active = new Set();
   for (const projectile of game.projectiles) {
     projectile.x += projectile.speed * dt;
-    let target = game.zombies.find(zombie => zombie.id === projectile.targetId);
-    if (!target) target = game.zombies.find(zombie => zombie.row === projectile.row && Math.abs(zombie.x - projectile.x) < 24);
+    let target = game.zombies.find(zombie => zombie.id === projectile.targetId && !zombie.dying);
+    if (!target) {
+      target = game.zombies.find(zombie => !zombie.dying && zombieOccupiesRow(zombie, projectile.row) && Math.abs(zombie.x - projectile.x) < 24);
+    }
     if (target && projectile.x >= target.x - 15) {
       damageZombie(target, projectile.damage);
       if (projectile.poison) {
@@ -462,7 +633,7 @@ function updateProjectiles(dt) {
         target.poisonTick = game.time + .5;
       }
       if (projectile.splash) {
-        game.zombies.filter(zombie => zombie.row === target.row && zombie.id !== target.id && Math.abs(zombie.x - target.x) < 115)
+        game.zombies.filter(zombie => !zombie.dying && zombie.id !== target.id && Math.abs(zombie.x - target.x) < 115 && zombieLaneRows(target).some(row => zombieOccupiesRow(zombie, row)))
           .forEach(zombie => damageZombie(zombie, 24));
       }
       sound('impact');
@@ -538,26 +709,27 @@ function updateBossSkill(zombie) {
 function moveZombie(zombie, distance) {
   const nextX = zombie.x - distance;
   const blocker = game.plants
-    .filter(plant => plant.row === zombie.row && zombie.x > plant.x + 22 && nextX < plant.x + 23)
+    .filter(plant => zombieOccupiesRow(zombie, plant.row) && zombie.x > plant.x + 22 && nextX < plant.x + 23)
     .sort((a, b) => b.x - a.x)[0];
   zombie.x = blocker ? blocker.x + 23 : nextX;
 }
 
 function updateZombies(dt) {
   for (const zombie of [...game.zombies]) {
+    if (zombie.dying) continue;
     if (zombie.poisonUntil > game.time && game.time >= zombie.poisonTick) {
       zombie.poisonTick += .5;
       damageZombie(zombie, 4);
-      if (!game.zombies.includes(zombie)) continue;
+      if (zombie.dying) continue;
     }
     if (zombie.type === 'boss') updateBossSkill(zombie);
     const blockers = game.plants
-      .filter(plant => plant.row === zombie.row && zombie.x - plant.x < 48 && zombie.x - plant.x > -22)
+      .filter(plant => zombieOccupiesRow(zombie, plant.row) && zombie.x - plant.x < 48 && zombie.x - plant.x > -22)
       .sort((a, b) => b.x - a.x);
     const blocker = blockers[0];
     const jumped = zombie.type === 'jumper' && blocker && !zombie.jumped;
     const rangedTarget = zombie.type === 'spitter' && !blocker ? game.plants
-      .filter(plant => plant.row === zombie.row && plant.x < zombie.x && zombie.x - plant.x <= ZOMBIES.spitter.range)
+      .filter(plant => zombieOccupiesRow(zombie, plant.row) && plant.x < zombie.x && zombie.x - plant.x <= ZOMBIES.spitter.range)
       .sort((a, b) => b.x - a.x)[0] : null;
     zombie.eating = Boolean(blocker) && !jumped;
     if (jumped) {
@@ -592,18 +764,23 @@ function updateZombies(dt) {
       const enraged = zombie.type === 'boss' && zombie.enraged ? 1.45 : 1;
       moveZombie(zombie, zombie.speed * (slowed ? .55 : 1) * enraged * dt);
     }
-    const baby = game.babies[zombie.row];
-    if (zombie.x < 122 && baby && !baby.used) triggerBaby(zombie.row, true);
-    if (zombie.x < 20 && game.state === 'running') finishGame(false);
+    const babyRow = zombieLaneRows(zombie).find(row => game.babies[row] && !game.babies[row].used);
+    if (zombie.x < 122 && babyRow !== undefined) triggerBaby(babyRow, true);
+    if (!zombie.dying && zombie.x < 20 && game.state === 'running') finishGame(false);
   }
+  game.zombies = game.zombies.filter(zombie => !zombie.dying || performance.now() < zombie.deathAt);
 }
 
 function damageZombie(zombie, amount) {
-  if (!game.zombies.includes(zombie)) return;
+  if (!game.zombies.includes(zombie) || zombie.dying) return;
   zombie.hp -= amount;
   animateEntity('zombies', zombie.id, 'hit', 130);
   if (zombie.hp <= 0) {
-    game.zombies = game.zombies.filter(item => item.id !== zombie.id);
+    zombie.hp = 0;
+    zombie.dying = true;
+    zombie.eating = false;
+    zombie.deathAt = performance.now() + (DEATH_DURATION[zombie.type] || 850);
+    zombie.fallTilt = (Math.random() < .5 ? -1 : 1) * (68 + Math.random() * 18);
     game.kills++;
     spawnEffect('', zombie.x, zombie.y + 20, 'dirt-burst');
   }
@@ -765,16 +942,35 @@ function triggerBaby(row, automatic) {
   if (game.state !== 'running') return;
   const baby = game.babies[row];
   if (!baby || baby.used) return;
-  if (!automatic && !game.zombies.some(zombie => zombie.row === row)) {
-    toast('这一行暂时没有僵尸，奶娃先保留体力');
+  const targets = game.zombies.filter(zombie => !zombie.dying && zombieOccupiesRow(zombie, row));
+  if (!targets.length) {
+    if (!automatic) toast('这一行暂时没有僵尸，奶娃先保留体力');
     return;
   }
   baby.used = true;
   baby.element.classList.add('performing');
   baby.element.disabled = true;
   startBabyPerformance(row);
-  [...game.zombies].filter(zombie => zombie.row === row).forEach(zombie => damageZombie(zombie, 99999));
-  $('statusText').textContent = automatic ? `第 ${row + 1} 行奶娃自动触发大笑，防线已清空` : `第 ${row + 1} 行奶娃捧腹大笑，僵尸全被笑跑了`;
+  const survivors = [];
+  targets.forEach(zombie => {
+    const damage = LAUGH_DAMAGE[zombie.type];
+    if (damage) {
+      damageZombie(zombie, damage);
+      if (!zombie.dying) {
+        survivors.push(zombie);
+        spawnEffect(`-${damage}`, zombie.x, zombie.y - 40, 'combat-text damage');
+      }
+    } else {
+      damageZombie(zombie, zombie.hp + 9999);
+    }
+  });
+  const prefix = automatic ? `第 ${row + 1} 行奶娃自动大笑` : `第 ${row + 1} 行奶娃捧腹大笑`;
+  if (survivors.length) {
+    const names = [...new Set(survivors.map(zombie => ZOMBIES[zombie.type].name))].join('、');
+    $('statusText').textContent = `${prefix}，${names}被笑声震伤但仍在前进`;
+  } else {
+    $('statusText').textContent = `${prefix}，僵尸全被笑倒了`;
+  }
   render();
 }
 
@@ -782,6 +978,7 @@ function finishGame(won) {
   if (game.state !== 'running') return;
   game.state = won ? 'won' : 'lost';
   game.selected = null;
+  cancelCardDrag();
   stopBabyPerformances();
   updatePauseButton();
   sound(won ? 'win' : 'lose');
@@ -849,10 +1046,12 @@ function render() {
     return element;
   }, (element, zombie) => {
     setEntityPosition(element, zombie);
-    if (zombie.type === 'boss') element.style.top = pctY(Math.max(110, Math.min(BOARD_H - 110, zombie.y)));
     if (zombie.type === 'brute') element.style.top = pctY(Math.max(85, Math.min(BOARD_H - 85, zombie.y)));
     element.classList.toggle('eating', zombie.eating);
     element.classList.toggle('enraged', zombie.enraged);
+    element.classList.toggle('dying', zombie.dying);
+    element.style.setProperty('--death-duration', `${DEATH_DURATION[zombie.type] || 850}ms`);
+    element.style.setProperty('--fall-tilt', `${zombie.fallTilt || 78}deg`);
     updateHealth(element, zombie);
   });
 
@@ -884,7 +1083,7 @@ function render() {
   $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${LEVEL.length} 波`;
   $('levelProgress').style.width = `${game.kills / game.total * 100}%`;
   $('progressText').textContent = `${game.kills} / ${game.total}`;
-  const boss = game.zombies.find(zombie => zombie.type === 'boss');
+  const boss = game.zombies.find(zombie => zombie.type === 'boss' && !zombie.dying);
   $('bossHud').classList.toggle('visible', Boolean(boss));
   if (boss) {
     $('bossHealthFill').style.width = `${Math.max(0, boss.hp / boss.maxHp * 100)}%`;
@@ -968,6 +1167,7 @@ function showStart() {
 
 function togglePause() {
   if (game.state === 'running') {
+    cancelCardDrag();
     game.state = 'paused';
     pauseBabyPerformances();
     updatePauseButton();
@@ -998,14 +1198,16 @@ function updatePauseButton() {
 function showHelp() {
   const previous = game.state;
   if (previous === 'running') {
+    cancelCardDrag();
     game.state = 'paused';
     pauseBabyPerformances();
   }
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
-      <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。选择左侧卡牌，再点击空草地放置；小铲子可移除角色。</div>
-      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，清空本行僵尸；僵尸突破时也会自动触发。每次只能用一次。</div>
+      <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
+      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每次只能用一次。</div>
+      <div><strong>僵尸王</strong><br>僵尸王占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>阵容搭配</strong><br>奶蛋与奶猪发展经济，奶牛与奶虎守前排，奶鸡提升本行攻速，奶兔治疗周围伙伴。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
@@ -1145,6 +1347,7 @@ $('soundButton').addEventListener('click', () => {
 });
 $('board').addEventListener('contextmenu', event => {
   event.preventDefault();
+  cancelCardDrag();
   game.selected = null;
   $('shovelButton').classList.remove('selected');
   updateCards();
@@ -1159,6 +1362,7 @@ document.addEventListener('keydown', event => {
     $('speedButton').textContent = `${game.speed}×`;
   }
   if (event.key === 'Escape') {
+    cancelCardDrag();
     game.selected = null;
     $('shovelButton').classList.remove('selected');
     updateCards();
