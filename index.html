@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#dff2c7">
+  <title>奶龙大战僵尸 · 奶家小院</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-custard" viewBox="0 0 48 48">
+      <path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/>
+      <path d="M17 17c3-4 7-5 10-5" fill="none" stroke="#fff9c9" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+    </symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5v14M17 5v14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor"/></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M5 8V3m0 5h5M5.6 7.4A8 8 0 1 1 4 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10H4Zm12-1c1 2 1 4 0 6m3-9c3 4 3 8 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10H4Zm12 0 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 2-2.4 2-2.4 4m0 3h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-shovel" viewBox="0 0 24 24"><path d="m14 4 6 6-3 3-6-6m3 3-8 8m-2 3c-2-1-3-2-2-4s2-3 4-2l3 3c1 2-1 4-3 5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6V2Z" fill="currentColor"/></symbol>
+  </svg>
+
+  <div class="page-decor cloud-one"></div>
+  <div class="page-decor cloud-two"></div>
+
+  <div id="app">
+    <header class="topbar glass-panel">
+      <div class="brand">
+        <div class="brand-badge"><img src="assets/dragon.png" alt="奶龙"></div>
+        <div>
+          <h1>奶龙大战僵尸</h1>
+          <p>奶家小院 <span></span> 第 1 关</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="resource-pill" id="resourcePill" aria-label="当前奶黄">
+          <svg class="custard-icon"><use href="#i-custard"></use></svg>
+          <strong id="custardCount">150</strong>
+          <span>奶黄</span>
+        </div>
+        <button class="icon-button" id="helpButton" title="玩法说明" aria-label="玩法说明"><svg><use href="#i-help"></use></svg></button>
+        <button class="icon-button" id="soundButton" title="关闭声音" aria-label="关闭声音"><svg><use href="#i-sound"></use></svg></button>
+        <button class="control-button" id="speedButton" title="切换游戏速度">1×</button>
+        <button class="control-button wide" id="pauseButton"><svg><use href="#i-pause"></use></svg><span>暂停</span></button>
+        <button class="icon-button" id="restartButton" title="重新开局" aria-label="重新开局"><svg><use href="#i-restart"></use></svg></button>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <aside class="deck-panel glass-panel">
+        <div class="panel-heading">
+          <div><span class="eyebrow">NAI FAMILY</span><h2>选择奶家人</h2></div>
+          <span class="unit-count">13 位</span>
+        </div>
+        <div id="cardGrid" class="card-grid" aria-label="奶家人卡牌"></div>
+        <div id="unitDetail" class="unit-detail">
+          <div class="detail-placeholder">点击卡牌查看技能<br>再点击草地放置</div>
+        </div>
+        <button id="shovelButton" class="shovel-button"><svg><use href="#i-shovel"></use></svg><span>小铲子</span><small>移除已放置角色</small></button>
+      </aside>
+
+      <section class="play-column">
+        <div class="level-strip glass-panel">
+          <div class="wave-copy"><span class="eyebrow">守护进度</span><strong id="waveLabel">第 1 / 5 波</strong></div>
+          <div class="progress-track"><div id="levelProgress" class="progress-fill"></div><span id="progressText">0 / 35</span></div>
+          <div class="zombie-legend"><span class="legend-dot basic"></span>普通<span class="legend-dot cone"></span>路障<span class="legend-dot bucket"></span>铁桶</div>
+        </div>
+
+        <div class="board-frame">
+          <div id="board" class="board" aria-label="五行九列奶家小院战场">
+            <div class="sky-glow"></div>
+            <div class="fence"></div>
+            <div class="porch"><span>奶家</span></div>
+            <div id="grid" class="grid"></div>
+            <div id="babyLayer" class="entity-layer"></div>
+            <div id="plantLayer" class="entity-layer"></div>
+            <div id="projectileLayer" class="entity-layer"></div>
+            <div id="zombieLayer" class="entity-layer"></div>
+            <div id="custardLayer" class="entity-layer"></div>
+            <div id="effectLayer" class="entity-layer"></div>
+            <div id="waveBanner" class="wave-banner"></div>
+          </div>
+        </div>
+
+        <div class="board-footer glass-panel">
+          <div class="status-message"><span class="status-dot"></span><span id="statusText">先放奶蛋攒奶黄，再布置攻击角色</span></div>
+          <div class="footer-hints"><span>点击奶黄收集</span><span>点击奶娃清行</span><span>右键取消选择</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal visible" role="dialog" aria-modal="true">
+    <div class="modal-card start-card">
+      <div class="modal-art">
+        <img class="hero-egg" src="assets/egg.png" alt="奶蛋">
+        <img class="hero-rat" src="assets/rat.png" alt="奶鼠">
+        <img class="hero-dragon" src="assets/dragon.png" alt="奶龙">
+      </div>
+      <span class="modal-kicker">奶家小院 · 第一关</span>
+      <h2>奶家人，集合！</h2>
+      <p>收集奶黄，种下奶家人，守住五行小院。</p>
+      <div class="start-rules">
+        <span><b>01</b>奶蛋持续产奶黄</span>
+        <span><b>02</b>十二生肖各怀本领</span>
+        <span><b>03</b>奶娃大笑清空一行</span>
+      </div>
+      <button id="startButton" class="primary-button">开始守护<svg><use href="#i-play"></use></svg></button>
+      <small>鼠标操作 · 空格暂停 · 支持 2 倍速</small>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
