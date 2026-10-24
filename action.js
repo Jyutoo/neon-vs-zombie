@@ -43,7 +43,7 @@
       swing: () => tone(260, 0.05, 'triangle'),
       hit: () => tone(120, 0.06, 'square', 0.02),
       heavy: () => { tone(90, 0.12, 'sawtooth', 0.03); tone(60, 0.18, 'sawtooth', 0.02, 0.05); },
-      fire: () => tone(150, 0.2, 'sawtooth', 0.02),
+      fire: () => tone(600, 0.15, 'sine', 0.025),
       dash: () => tone(520, 0.08, 'triangle', 0.015),
       hurt: () => tone(110, 0.15, 'square', 0.02),
       death: () => tone(180, 0.12, 'triangle', 0.02),
@@ -124,7 +124,7 @@
   const keys = new Set();
   const playerEl = document.createElement('div');
   playerEl.className = 'player';
-  playerEl.innerHTML = '<img src="assets/dragon.png" alt="奶龙">';
+  playerEl.innerHTML = '<img src="assets/baby-glance.png" alt="奶娃">';
   playerLayer.appendChild(playerEl);
 
   function resize() {
@@ -871,7 +871,7 @@
     openOverlay(`
     <div class="result-card">
       <span class="eyebrow">本局结束</span>
-      <h2>奶龙倒下了</h2>
+      <h2>奶娃倒下了</h2>
       <p>到达第 ${Math.min(state.screenIndex + 1, DATA.level.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
       <div class="result-actions">
         <button id="retryButton" class="primary-button">重新挑战</button>
@@ -1206,7 +1206,7 @@
       <div class="result-card help-card">
         <span class="eyebrow">玩法说明</span>
         <h2>奶龙战僵尸</h2>
-        <p>A/D 或方向键移动，空格跳跃（获得二段跳后可再跳一次），J 普攻三连，空中 J 跳劈，K 重击，L 喷火，Shift 冲刺，Esc / P 暂停。</p>
+        <p>A/D 或方向键移动，空格跳跃（获得二段跳后可再跳一次），J 普攻三连，空中 J 跳劈，K 重击，L 音波，Shift 冲刺，Esc / P 暂停。</p>
         <p>击杀敌人获得经验，升级时三选一强化。闯关模式三段清怪后挑战僵尸王；无尽模式波次无限增强，每 5 波精英、每 10 波僵尸王。</p>
         <div class="result-actions"><button id="helpClose" class="primary-button">知道了</button></div>
       </div>`);
