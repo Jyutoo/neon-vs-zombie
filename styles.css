@@ -56,6 +56,7 @@ h1 { font-size: 25px; letter-spacing: 1px; margin: 0 0 4px; font-weight: 900; co
 .resource-pill.bump { animation: resourceBump .3s ease; }
 .icon-button, .control-button { height: 44px; border: 1px solid rgba(103,137,88,.14); color: #52705a; background: rgba(255,255,255,.66); border-radius: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: .18s ease; box-shadow: 0 3px 8px rgba(66,89,55,.05); }
 .icon-button { width: 44px; }
+a.icon-button { text-decoration: none; color: #52705a; }
 .control-button { min-width: 46px; font-weight: 900; }
 .control-button.wide { padding: 0 14px; gap: 7px; }
 .control-button.wide svg { width: 17px; }

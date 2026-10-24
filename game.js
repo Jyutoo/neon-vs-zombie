@@ -617,6 +617,9 @@ function hideHome() {
 function leaveToHome() {
   resetGame(false);
   sound('select');
+  setTimeout(() => {
+    window.location.href = 'index.html';
+  }, 300);
 }
 
 function maxDisplayLevel() {

@@ -5,179 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#dff2c7">
   <title>奶龙大战僵尸 · 奶家小院</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="menu.css">
 </head>
-<body class="home-open">
-  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg">
-    <symbol id="i-custard" viewBox="0 0 48 48">
-      <path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/>
-      <path d="M17 17c3-4 7-5 10-5" fill="none" stroke="#fff9c9" stroke-width="4" stroke-linecap="round" opacity=".85"/>
-    </symbol>
-    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5v14M17 5v14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
-    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor"/></symbol>
-    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M5 8V3m0 5h5M5.6 7.4A8 8 0 1 1 4 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10H4Zm12-1c1 2 1 4 0 6m3-9c3 4 3 8 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10H4Zm12 0 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 2-2.4 2-2.4 4m0 3h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-shovel" viewBox="0 0 24 24"><path d="m14 4 6 6-3 3-6-6m3 3-8 8m-2 3c-2-1-3-2-2-4s2-3 4-2l3 3c1 2-1 4-3 5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6V2Z" fill="currentColor"/></symbol>
-    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v9h5v-6h4v6h5v-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="24" cy="24" r="13" fill="currentColor" opacity=".18"/><path d="M24 13c2.7 4.6 7.3 6.2 7.3 11.2a7.3 7.3 0 1 1-14.6 0C16.7 19.2 21.3 17.6 24 13Z" fill="currentColor"/></symbol>
-  </svg>
+<body>
+  <div class="menu-bg" aria-hidden="true">
+    <div class="cloud cloud-a"></div>
+    <div class="cloud cloud-b"></div>
+    <div class="hill hill-back"></div>
+    <div class="hill hill-front"></div>
+    <div class="fence"></div>
+    <div class="grass"></div>
+  </div>
 
-  <div class="page-decor cloud-one"></div>
-  <div class="page-decor cloud-two"></div>
+  <main class="menu-shell">
+    <header class="hero">
+      <div class="hero-cast">
+        <img class="hero-zombie" src="assets/zombie.png" alt="僵尸">
+        <img class="hero-dragon" src="assets/dragon.png" alt="奶龙">
+      </div>
+      <p class="eyebrow">NAI FAMILY DEFENSE</p>
+      <h1>奶龙大战僵尸</h1>
+      <p class="subtitle">奶家小院保卫战</p>
+    </header>
 
-  <div id="homeScreen" class="home-screen visible" aria-label="奶龙大战僵尸主页面">
-    <div class="home-orb orb-one"></div>
-    <div class="home-orb orb-two"></div>
-    <div class="home-shell">
-      <header class="home-header glass-panel">
-        <div class="home-brand">
-          <div class="brand-badge"><img src="assets/dragon.png" alt="奶龙"></div>
-          <div>
-            <span class="eyebrow">NAILONG VS ZOMBIES</span>
-            <h1>奶龙大战僵尸</h1>
-            <p>无尽守护 <span></span> 奶家小院</p>
-          </div>
-        </div>
-        <div class="wallet-card" aria-label="奶币记录">
-          <div class="wallet-coin"><svg><use href="#i-coin"></use></svg></div>
-          <div class="wallet-balance"><span>奶币余额</span><strong id="homeCoins" aria-live="polite">0</strong></div>
-          <div class="wallet-stats">
-            <span>累计获得 <b id="homeEarned">0</b></span>
-            <span>已通关 <b id="homeCleared">0</b> 关</span>
-            <span>已解锁 <b id="homeUnlocked">4</b> / 13</span>
-          </div>
-        </div>
-        <button id="resetProgressButton" class="ghost-button" title="清空奶币、解锁与关卡记录">重置进度</button>
-      </header>
+    <section class="mode-grid" aria-label="选择模式">
+      <a class="mode-card adventure" href="game.html">
+        <span class="mode-tag">冒险模式</span>
+        <img src="assets/egg.png" alt="">
+        <strong>守住奶家小院</strong>
+        <p>收集奶黄，种植十二生肖，击退五波僵尸。</p>
+        <span class="mode-cta">进入第 1 关</span>
+      </a>
 
-      <main class="home-main">
-        <section class="home-level-panel glass-panel">
-          <div class="home-section-head">
-            <div>
-              <span class="eyebrow">ENDLESS GARDEN</span>
-              <h2>无尽守护</h2>
-              <p>每关五波，难度逐关上升，每 5 关迎战僵尸王。</p>
-            </div>
-            <span class="progress-chip">下一关 <b id="homeNextLevel">1</b></span>
-          </div>
-          <div class="level-track-wrap">
-            <button class="track-arrow" id="trackPrev" aria-label="查看更早的关卡">‹</button>
-            <div class="level-track-shell">
-              <span class="track-range" id="trackRange">第 1 – 5 关</span>
-              <div id="levelTrack" class="level-track" aria-label="关卡选择"></div>
-            </div>
-            <button class="track-arrow" id="trackNext" aria-label="查看更后的关卡">›</button>
-          </div>
-          <div id="levelPreview" class="level-preview"></div>
-          <div class="home-tips">
-            <span>首通奖励全额奶币</span>
-            <span>重复通关获得 30%</span>
-            <span>失败不扣奶币</span>
-          </div>
+      <button class="mode-card action" id="actionModeCard" type="button" data-open="modeModal">
+        <span class="mode-tag">奶龙战僵尸</span>
+        <img src="assets/dragon.png" alt="">
+        <strong>亲自上阵</strong>
+        <p>横版格斗闯关，三段关卡与僵尸王；或挑战无尽波次。</p>
+        <span class="mode-cta">选择模式</span>
+      </button>
+    </section>
+
+    <footer class="menu-footer">
+      <button class="text-button" type="button" data-open="helpModal">玩法说明</button>
+      <span>v1.1 · 原生 HTML / CSS / JS</span>
+    </footer>
+  </main>
+
+  <div class="modal" id="modeModal" aria-hidden="true">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close aria-label="关闭">×</button>
+      <span class="eyebrow">奶龙战僵尸</span>
+      <h2>选择玩法</h2>
+      <div class="mode-options">
+        <a class="mode-option" href="action.html?mode=level">
+          <strong>闯关模式</strong>
+          <span>三段关卡 · 精英怪 · 僵尸王</span>
+        </a>
+        <a class="mode-option" href="action.html?mode=endless">
+          <strong>无尽模式</strong>
+          <span data-best-wave>暂无记录</span>
+        </a>
+      </div>
+      <small>键盘操作 · A/D 移动 · 空格跳跃 · J/K/L 攻击</small>
+    </div>
+  </div>
+  <div class="modal" id="helpModal" aria-hidden="true">
+    <div class="modal-card help-card">
+      <button class="modal-close" type="button" data-close aria-label="关闭">×</button>
+      <span class="eyebrow">玩法说明</span>
+      <h2>两种玩法</h2>
+      <div class="help-grid">
+        <section>
+          <h3>冒险模式</h3>
+          <p>点击发光的奶黄收集资源，选择左侧卡牌后点击草地放置。奶娃可清空一行，空格暂停，数字 1 / 2 切换速度。</p>
         </section>
-
-        <aside class="home-roster-panel glass-panel">
-          <div class="home-section-head">
-            <div>
-              <span class="eyebrow">NAI FAMILY</span>
-              <h2>奶家人图鉴</h2>
-            </div>
-            <span class="progress-chip">已解锁 <b id="homeRosterCount">4</b> / 13</span>
-          </div>
-          <div id="rosterGrid" class="roster-grid"></div>
-          <p class="roster-tip">通关获得奶币，解锁角色永久保留。初始四人始终可用。</p>
-        </aside>
-      </main>
-
-      <footer class="home-footer">
-        <span>进度自动保存在本机浏览器</span>
-        <span>拖动种植 · 点击奶娃大笑 · 空格暂停</span>
-      </footer>
+        <section>
+          <h3>奶龙战僵尸</h3>
+          <p>A/D 移动，空格跳跃，J 普攻三连，K 重击，L 喷火，Shift 冲刺，Esc 暂停。击杀敌人升级并三选一强化；闯关终点是僵尸王，无尽模式波次无限增强。</p>
+        </section>
+      </div>
     </div>
   </div>
 
-  <div id="app">
-    <header class="topbar glass-panel">
-      <div class="brand">
-        <div class="brand-badge"><img src="assets/dragon.png" alt="奶龙"></div>
-        <div>
-          <h1>奶龙大战僵尸</h1>
-          <p>无尽守护 <span></span> <b id="brandLevel">第 1 关</b></p>
-        </div>
-      </div>
-      <div class="top-actions">
-        <div class="resource-pill" id="resourcePill" aria-label="当前奶黄">
-          <svg class="custard-icon"><use href="#i-custard"></use></svg>
-          <strong id="custardCount">150</strong>
-          <span>奶黄</span>
-        </div>
-        <button class="icon-button" id="homeButton" title="返回主页" aria-label="返回主页"><svg><use href="#i-home"></use></svg></button>
-        <button class="icon-button" id="helpButton" title="玩法说明" aria-label="玩法说明"><svg><use href="#i-help"></use></svg></button>
-        <button class="icon-button" id="soundButton" title="关闭声音" aria-label="关闭声音"><svg><use href="#i-sound"></use></svg></button>
-        <button class="control-button" id="speedButton" title="切换游戏速度">1×</button>
-        <button class="control-button wide" id="pauseButton"><svg><use href="#i-pause"></use></svg><span>暂停</span></button>
-        <button class="icon-button" id="restartButton" title="重新开局" aria-label="重新开局"><svg><use href="#i-restart"></use></svg></button>
-      </div>
-    </header>
-
-    <main class="game-layout">
-      <aside class="deck-panel glass-panel">
-        <div class="panel-heading">
-          <div><span class="eyebrow">NAI FAMILY</span><h2>选择奶家人</h2></div>
-          <span id="unitCount" class="unit-count">可用 4 / 13</span>
-        </div>
-        <div id="cardGrid" class="card-grid" aria-label="奶家人卡牌"></div>
-        <div id="unitDetail" class="unit-detail">
-          <div class="detail-placeholder">拖动卡牌到草地种植<br>也可以点击卡牌再选格子</div>
-        </div>
-        <button id="shovelButton" class="shovel-button"><svg><use href="#i-shovel"></use></svg><span>小铲子</span><small>移除已放置角色</small></button>
-      </aside>
-
-      <section class="play-column">
-        <div class="level-strip glass-panel">
-          <div class="wave-copy"><span class="eyebrow">守护进度</span><strong id="waveLabel">第 1 / 5 波</strong></div>
-          <div class="progress-track"><div id="levelProgress" class="progress-fill"></div><span id="progressText">0 / 35</span></div>
-          <div class="zombie-legend"><span class="legend-dot basic"></span>普通<span class="legend-dot cone"></span>路障<span class="legend-dot bucket"></span>铁桶<span class="legend-dot brute"></span>大块头<span class="legend-dot spitter"></span>远程<span class="legend-dot jumper"></span>跳跃<span class="legend-dot boss"></span>僵尸王</div>
-        </div>
-
-        <div class="board-frame">
-          <div id="board" class="board" aria-label="五行九列奶家小院战场">
-            <div class="sky-glow"></div>
-            <div class="fence"></div>
-            <div class="porch"><span>奶家</span></div>
-            <div id="grid" class="grid"></div>
-            <div id="babyLayer" class="entity-layer"></div>
-            <div id="plantLayer" class="entity-layer"></div>
-            <div id="projectileLayer" class="entity-layer"></div>
-            <div id="zombieLayer" class="entity-layer"></div>
-            <div id="enemyProjectileLayer" class="entity-layer"></div>
-            <div id="babyPerformanceLayer" class="entity-layer"></div>
-            <div id="custardLayer" class="entity-layer"></div>
-            <div id="effectLayer" class="entity-layer"></div>
-            <div id="bossHud" class="boss-hud">
-              <div><strong>僵尸王</strong><span id="bossPhase">召唤援军 · 远程压制</span></div>
-              <div class="boss-health-track"><div id="bossHealthFill"></div></div>
-            </div>
-            <div id="waveBanner" class="wave-banner"></div>
-          </div>
-        </div>
-
-        <div class="board-footer glass-panel">
-          <div class="status-message"><span class="status-dot"></span><span id="statusText">先放奶蛋攒奶黄，再布置攻击角色</span></div>
-          <div class="footer-hints"><span>拖动卡牌种植</span><span>点击奶娃大笑</span><span>右键取消</span></div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div id="modal" class="modal" role="dialog" aria-modal="true"></div>
-  <div id="toast" class="toast" role="status"></div>
-
-  <script src="game.js"></script>
+  <script src="menu.js"></script>
 </body>
 </html>
