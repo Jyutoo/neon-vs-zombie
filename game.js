@@ -41,10 +41,24 @@ const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tig
 const UNLOCK_COSTS = { rat: 100, rabbit: 140, dog: 160, tiger: 220, goat: 240, rooster: 260, pig: 280, horse: 320, dragon: 380 };
 const V1_SAVE_KEY = 'nailong-vs-zombies-progress-v1';
 const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
-const WAVE_COUNT = 5;
-const BASE_WAVE_COUNTS = [3, 4, 6, 8, 10];
-const WAVE_STARTS = [12, 48, 88, 132, 180];
-const WAVE_INTERVALS = [8, 7, 6.5, 6, 5.5];
+function levelWaveCount(level) {
+  if (level <= 3) return 5;
+  if (level <= 6) return 6;
+  if (level <= 9) return 7;
+  if (level <= 11) return 8;
+  return 10; // level 12
+}
+
+function levelWaveConfig(level) {
+  const count = levelWaveCount(level);
+  const starts = [];
+  const intervals = [];
+  for (let i = 0; i < count; i++) {
+    starts.push(12 + i * 36);
+    intervals.push(Math.max(4, 8 - i * 0.4));
+  }
+  return { starts, intervals };
+}
 
 function defaultProgress() {
   return {
@@ -169,16 +183,22 @@ function enemyPoolForLevel(level, waveIndex) {
 
 function levelWaves(level) {
   const random = seededRandom(level * 7919 + 13);
-  const extra = Math.min(6, Math.floor((level - 1) / 2));
-  return BASE_WAVE_COUNTS.map((baseCount, waveIndex) => {
+  const waveCount = levelWaveCount(level);
+  const config = levelWaveConfig(level);
+  const waves = [];
+
+  for (let waveIndex = 0; waveIndex < waveCount; waveIndex++) {
     const pool = enemyPoolForLevel(level, waveIndex);
+    const baseCount = 3 + Math.floor(waveIndex * 1.2);
     const types = [];
-    for (let i = 0; i < baseCount + extra; i++) {
+    for (let i = 0; i < baseCount; i++) {
       types.push(pool[Math.floor(random() * pool.length)]);
     }
-    if (waveIndex === WAVE_COUNT - 1 && level % 5 === 0) types.push('boss');
-    return { start: WAVE_STARTS[waveIndex], interval: WAVE_INTERVALS[waveIndex], types };
-  });
+    // Boss only on level 12, last wave
+    if (level === 12 && waveIndex === waveCount - 1) types.push('boss');
+    waves.push({ start: config.starts[waveIndex], interval: config.intervals[waveIndex], types });
+  }
+  return waves;
 }
 
 function enemyTypesForLevel(level) {
@@ -188,12 +208,12 @@ function enemyTypesForLevel(level) {
   if (level >= 4) types.push('jumper');
   if (level >= 5) types.push('spitter');
   if (level >= 6) types.push('brute');
-  if (level % 5 === 0) types.push('boss');
+  if (level === 12) types.push('boss');
   return types;
 }
 
 function firstClearReward(level) {
-  return 100 + (level - 1) * 50 + Math.floor((level - 1) / 5) * 50;
+  return 50 + (level - 1) * 15;
 }
 
 function repeatReward(level) {
@@ -201,12 +221,12 @@ function repeatReward(level) {
 }
 
 function difficultyLabel(level) {
-  if (level % 5 === 0) return 'BOSS 关';
-  if (level <= 2) return '入门';
-  if (level <= 5) return '进阶';
-  if (level <= 9) return '精英';
-  if (level <= 14) return '噩梦';
-  return '地狱';
+  if (level === 12) return 'BOSS 关';
+  if (level <= 3) return '入门';
+  if (level <= 6) return '进阶';
+  if (level <= 9) return '中级';
+  if (level <= 11) return '高级';
+  return '最终BOSS';
 }
 
 const $ = id => document.getElementById(id);
@@ -679,7 +699,7 @@ function leaveToHome() {
 }
 
 function maxDisplayLevel() {
-  return Math.max(5, progress.highestCleared + 2);
+  return 12;
 }
 
 function renderHome() {
@@ -709,7 +729,7 @@ function renderLevelTrack() {
     const current = level === progress.highestCleared + 1;
     const locked = level > progress.highestCleared + 1;
     const selected = level === progress.selectedLevel;
-    const boss = level % 5 === 0;
+    const boss = level === 12;
     const reward = cleared ? repeatReward(level) : firstClearReward(level);
     const status = cleared
       ? '<span class="node-status"><svg><use href="#i-check"></use></svg>已通关</span>'
@@ -739,7 +759,7 @@ function renderLevelPreview() {
   const level = progress.selectedLevel;
   const firstClear = level === progress.highestCleared + 1;
   const reward = firstClear ? firstClearReward(level) : repeatReward(level);
-  const boss = level % 5 === 0;
+  const boss = level === 12;
   const scaling = levelScaling(level);
   const enemies = enemyTypesForLevel(level)
     .map(type => `<span class="enemy-chip ${type}"><i></i>${ZOMBIES[type].name}</span>`)
@@ -747,9 +767,9 @@ function renderLevelPreview() {
   $('levelPreview').innerHTML = `
     <div class="preview-main">
       <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '无尽守护'}</span>
-      <h3>第 ${level} 关<small>五波僵尸</small></h3>
+      <h3>第 ${level} 关<small>${levelWaveCount(level)} 波僵尸</small></h3>
       <div class="preview-tags">
-        <span>${WAVE_COUNT} 波</span>
+        <span>${levelWaveCount(level)} 波</span>
         <span>${difficultyLabel(level)}</span>
         <span>僵尸血量 ×${scaling.hp.toFixed(2)}</span>
         ${boss ? '<span class="boss-tag">僵尸王出没</span>' : ''}
@@ -1541,7 +1561,7 @@ function render() {
   }, setEntityPosition);
 
   $('custardCount').textContent = game.custard;
-  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${game.waves.length || WAVE_COUNT} 波`;
+  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${game.waves.length} 波`;
   $('levelProgress').style.width = `${game.kills / game.total * 100}%`;
   $('progressText').textContent = `${game.kills} / ${game.total}`;
   const boss = game.zombies.find(zombie => zombie.type === 'boss' && !zombie.dying);
@@ -1676,11 +1696,11 @@ function showHelp() {
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
-      <div><strong>关卡与奶黄</strong><br>每一关有五波僵尸。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
+      <div><strong>关卡与奶黄</strong><br>每关有多波僵尸（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
       <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶黄解锁，解锁后永久可用。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
       <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
-      <div><strong>僵尸王</strong><br>每 5 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
+      <div><strong>僵尸王</strong><br>第 12 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
     <button class="primary-button" id="helpClose">知道了</button>`, 'compact');
