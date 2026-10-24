@@ -36,13 +36,122 @@ const ZOMBIES = {
 const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
 const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitter: 850, jumper: 850, brute: 1050, boss: 1400 };
 
-const LEVEL = [
-  { start: 10, interval: 8, types: ['basic', 'basic', 'basic', 'cone'] },
-  { start: 46, interval: 7, types: ['basic', 'cone', 'jumper', 'basic', 'cone', 'basic', 'basic'] },
-  { start: 88, interval: 6, types: ['runner', 'spitter', 'cone', 'basic', 'jumper', 'runner', 'cone', 'basic'] },
-  { start: 132, interval: 5.5, types: ['cone', 'brute', 'bucket', 'spitter', 'basic', 'jumper', 'runner', 'cone', 'bucket'] },
-  { start: 178, interval: 4.5, types: ['runner', 'cone', 'brute', 'bucket', 'spitter', 'jumper', 'cone', 'brute', 'spitter', 'bucket', 'runner', 'boss'] }
-];
+const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster', 'pig', 'horse', 'dragon'];
+const UNLOCK_COSTS = { rat: 100, rabbit: 140, dog: 160, tiger: 220, goat: 240, rooster: 260, pig: 280, horse: 320, dragon: 380 };
+const SAVE_KEY = 'nailong-vs-zombies-progress-v1';
+const WAVE_COUNT = 5;
+const BASE_WAVE_COUNTS = [3, 4, 6, 8, 10];
+const WAVE_STARTS = [12, 48, 88, 132, 180];
+const WAVE_INTERVALS = [8, 7, 6.5, 6, 5.5];
+
+function defaultProgress() {
+  return { coins: 0, totalEarned: 0, highestCleared: 0, selectedLevel: 1, unlocked: [...STARTING_UNITS] };
+}
+
+function loadProgress() {
+  const fallback = defaultProgress();
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!raw || typeof raw !== 'object') return fallback;
+    const valid = Object.keys(TYPES);
+    const unlocked = [...new Set((Array.isArray(raw.unlocked) ? raw.unlocked : []).filter(key => valid.includes(key)))];
+    STARTING_UNITS.forEach(key => { if (!unlocked.includes(key)) unlocked.push(key); });
+    const highestCleared = Math.max(0, Math.floor(Number(raw.highestCleared) || 0));
+    const coins = Math.max(0, Math.floor(Number(raw.coins) || 0));
+    const totalEarned = Math.max(coins, Math.floor(Number(raw.totalEarned) || 0));
+    const selectedLevel = Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(raw.selectedLevel) || 1)));
+    return { coins, totalEarned, highestCleared, selectedLevel, unlocked };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
+  } catch {}
+}
+
+let progress = loadProgress();
+let homeTrackStart = 1;
+let lastResult = null;
+
+function isUnlocked(key) {
+  return progress.unlocked.includes(key);
+}
+
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function levelScaling(level) {
+  return {
+    hp: Math.pow(1.15, level - 1),
+    speed: Math.min(1.35, 1 + (level - 1) * .025),
+    bite: Math.min(1.8, 1 + Math.max(0, level - 3) * .035)
+  };
+}
+
+function enemyPoolForLevel(level, waveIndex) {
+  if (waveIndex === 0) return ['basic', 'basic', 'cone'];
+  const pool = ['basic', 'basic', 'cone'];
+  if (level >= 2) pool.push('runner');
+  if (level >= 3) pool.push('bucket');
+  if (level >= 4) pool.push('jumper');
+  if (level >= 5) pool.push('spitter');
+  if (level >= 6) pool.push('brute');
+  return waveIndex < 2 ? pool.filter(type => type !== 'brute') : pool;
+}
+
+function levelWaves(level) {
+  const random = seededRandom(level * 7919 + 13);
+  const extra = Math.min(6, Math.floor((level - 1) / 2));
+  return BASE_WAVE_COUNTS.map((baseCount, waveIndex) => {
+    const pool = enemyPoolForLevel(level, waveIndex);
+    const types = [];
+    for (let i = 0; i < baseCount + extra; i++) {
+      types.push(pool[Math.floor(random() * pool.length)]);
+    }
+    if (waveIndex === WAVE_COUNT - 1 && level % 5 === 0) types.push('boss');
+    return { start: WAVE_STARTS[waveIndex], interval: WAVE_INTERVALS[waveIndex], types };
+  });
+}
+
+function enemyTypesForLevel(level) {
+  const types = ['basic', 'cone'];
+  if (level >= 2) types.push('runner');
+  if (level >= 3) types.push('bucket');
+  if (level >= 4) types.push('jumper');
+  if (level >= 5) types.push('spitter');
+  if (level >= 6) types.push('brute');
+  if (level % 5 === 0) types.push('boss');
+  return types;
+}
+
+function firstClearReward(level) {
+  return 100 + (level - 1) * 50 + Math.floor((level - 1) / 5) * 50;
+}
+
+function repeatReward(level) {
+  return Math.max(10, Math.floor(firstClearReward(level) * .3));
+}
+
+function difficultyLabel(level) {
+  if (level % 5 === 0) return 'BOSS 关';
+  if (level <= 2) return '入门';
+  if (level <= 5) return '进阶';
+  if (level <= 9) return '精英';
+  if (level <= 14) return '噩梦';
+  return '地狱';
+}
 
 const $ = id => document.getElementById(id);
 const layers = {
@@ -70,6 +179,9 @@ let dragClickUntil = 0;
 
 const game = {
   state: 'ready',
+  levelIndex: progress.selectedLevel,
+  waves: [],
+  scaling: levelScaling(progress.selectedLevel),
   time: 0,
   custard: 150,
   speed: 1,
@@ -83,7 +195,7 @@ const game = {
   cooldowns: {},
   selected: null,
   queue: [],
-  total: LEVEL.reduce((sum, wave) => sum + wave.types.length, 0),
+  total: 0,
   spawned: 0,
   kills: 0,
   collected: 0,
@@ -92,8 +204,8 @@ const game = {
   naturalTimer: 5
 };
 
-function buildQueue() {
-  return LEVEL.flatMap((wave, waveIndex) => wave.types.map((type, index) => ({
+function buildQueue(waves) {
+  return waves.flatMap((wave, waveIndex) => wave.types.map((type, index) => ({
     time: wave.start + index * wave.interval,
     type,
     wave: waveIndex
@@ -133,7 +245,8 @@ function initGrid() {
 }
 
 function initCards() {
-  Object.entries(TYPES).forEach(([key, type]) => {
+  UNIT_ORDER.forEach(key => {
+    const type = TYPES[key];
     const card = document.createElement('button');
     card.className = 'unit-card';
     card.dataset.type = key;
@@ -143,7 +256,8 @@ function initCards() {
       <span class="card-role">${type.role}</span>
       <span class="card-cost">${type.cost}</span>
       <span class="cooldown-mask"></span>
-      <span class="cooldown-text"></span>`;
+      <span class="cooldown-text"></span>
+      <span class="card-lock"><svg><use href="#i-lock"></use></svg>未解锁</span>`;
     card.addEventListener('pointerdown', event => beginCardPress(event, key, card));
     card.addEventListener('click', () => {
       if (performance.now() < dragClickUntil) return;
@@ -157,15 +271,26 @@ function initCards() {
     cardDom.set(key, card);
     game.cooldowns[key] = 0;
   });
+  applyCardLocks();
+}
+
+function applyCardLocks() {
+  cardDom.forEach((card, key) => {
+    const locked = !isUnlocked(key);
+    card.classList.toggle('locked', locked);
+    card.setAttribute('aria-disabled', String(locked));
+    card.title = locked ? `通关获得奶币后，在主页面解锁${TYPES[key].name}` : '';
+  });
+  $('unitCount').textContent = `可用 ${progress.unlocked.length} / ${Object.keys(TYPES).length}`;
 }
 
 function beginCardPress(event, key, card) {
-  if (event.button !== 0 || event.isPrimary === false || game.state !== 'running') return;
+  if (event.button !== 0 || event.isPrimary === false || game.state !== 'running' || !isUnlocked(key)) return;
   cardPress = { key, card, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
 }
 
 function startCardDrag(event) {
-  if (!cardPress || game.state !== 'running') return cancelCardDrag();
+  if (!cardPress || game.state !== 'running' || !isUnlocked(cardPress.key)) return cancelCardDrag();
   const { key, card } = cardPress;
   const type = TYPES[key];
   const ghost = document.createElement('div');
@@ -285,6 +410,13 @@ document.addEventListener('click', event => {
 
 function showUnitDetail(key) {
   const type = TYPES[key];
+  if (!isUnlocked(key)) {
+    $('unitDetail').innerHTML = `
+      <div class="detail-title"><strong>${type.name}</strong><span>${type.role}</span></div>
+      <p>${type.description}</p>
+      <div class="detail-stats"><span>未解锁</span><span>主页解锁需 ${UNLOCK_COSTS[key]} 奶币</span></div>`;
+    return;
+  }
   $('unitDetail').innerHTML = `
     <div class="detail-title"><strong>${type.name}</strong><span>${type.role}</span></div>
     <p>${type.description}</p>
@@ -295,6 +427,12 @@ function selectUnit(key) {
   if (game.state !== 'running') return;
   const type = TYPES[key];
   showUnitDetail(key);
+  if (!isUnlocked(key)) {
+    toast(`${type.name}尚未解锁，返回主页用 ${UNLOCK_COSTS[key]} 奶币解锁`);
+    shakeCard(key);
+    sound('deny');
+    return;
+  }
   if (game.cooldowns[key] > 0) {
     toast(`${type.name}还在休息，${Math.ceil(game.cooldowns[key])} 秒后可用`);
     return;
@@ -331,6 +469,7 @@ function updateCellPreview(cell, row, col) {
 
 function placementProblem(key, row, col) {
   if (game.state !== 'running') return { message: '游戏暂停中，先继续游戏吧' };
+  if (!isUnlocked(key)) return { message: `${TYPES[key].name}尚未解锁，先去主页解锁`, deny: true };
   const type = TYPES[key];
   if (plantAt(row, col)) return { message: '这里已经有奶家人了' };
   if (game.cooldowns[key] > 0) {
@@ -394,17 +533,23 @@ function plantAt(row, col) {
   return game.plants.find(plant => plant.row === row && plant.col === col);
 }
 
-function resetGame(autostart = true) {
+function resetGame(autostart = false, level = progress.selectedLevel) {
   nextId = 1;
   cancelCardDrag();
   dragClickUntil = 0;
+  lastResult = null;
+  const waves = levelWaves(level);
+  const queue = buildQueue(waves);
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
+    levelIndex: level,
+    waves,
+    scaling: levelScaling(level),
     time: 0, custard: 150, speed: 1,
     plants: [], zombies: [], projectiles: [], enemyProjectiles: [], custards: [], babies: [],
-    selected: null, queue: buildQueue(), spawned: 0, kills: 0,
+    selected: null, queue, spawned: 0, kills: 0,
     collected: 0, placed: 0, wave: -1, naturalTimer: 5,
-    total: LEVEL.reduce((sum, wave) => sum + wave.types.length, 0)
+    total: queue.length
   });
   Object.keys(game.cooldowns).forEach(key => game.cooldowns[key] = 0);
   stopBabyPerformances();
@@ -424,29 +569,240 @@ function resetGame(autostart = true) {
   $('speedButton').textContent = '1×';
   $('shovelButton').classList.remove('selected');
   $('statusText').textContent = '先放奶蛋攒奶黄，再布置攻击角色';
+  $('brandLevel').textContent = `第 ${level} 关`;
+  applyCardLocks();
   hideModal();
   updatePauseButton();
   render();
   lastFrame = performance.now();
-  if (!autostart) showStart();
+  if (autostart) hideHome(); else showHome();
 }
 
-function startGame() {
-  resetGame(true);
+function startLevel(level) {
+  const target = Math.max(1, Math.floor(Number(level) || 1));
+  if (target > progress.highestCleared + 1) {
+    toast(`先通关第 ${progress.highestCleared + 1} 关才能继续`);
+    sound('deny');
+    return;
+  }
+  progress.selectedLevel = target;
+  saveProgress();
+  resetGame(true, target);
   initAudio();
   sound('start');
-  toast('先种奶蛋，收集奶黄后布置攻击角色');
+  toast(`第 ${target} 关开始：先种奶蛋，收集奶黄`);
+}
+
+function restartLevel() {
+  startLevel(game.levelIndex || progress.selectedLevel);
+}
+
+function showHome() {
+  game.state = 'ready';
+  hideModal();
+  document.body.classList.add('home-open');
+  $('homeScreen').classList.add('visible');
+  const maxLevel = maxDisplayLevel();
+  homeTrackStart = Math.max(1, Math.min(progress.selectedLevel - 4, Math.max(1, maxLevel - 9)));
+  renderHome();
+  updatePauseButton();
+  lastFrame = performance.now();
+}
+
+function hideHome() {
+  $('homeScreen').classList.remove('visible');
+  document.body.classList.remove('home-open');
+}
+
+function leaveToHome() {
+  resetGame(false);
+  sound('select');
+}
+
+function maxDisplayLevel() {
+  return Math.max(5, progress.highestCleared + 2);
+}
+
+function renderHome() {
+  $('homeCoins').textContent = progress.coins;
+  $('homeEarned').textContent = progress.totalEarned;
+  $('homeCleared').textContent = progress.highestCleared;
+  $('homeUnlocked').textContent = progress.unlocked.length;
+  $('homeRosterCount').textContent = progress.unlocked.length;
+  $('homeNextLevel').textContent = progress.highestCleared + 1;
+  renderLevelTrack();
+  renderLevelPreview();
+  renderRoster();
+  applyCardLocks();
+}
+
+function renderLevelTrack() {
+  const maxLevel = maxDisplayLevel();
+  const maxStart = Math.max(1, maxLevel - 9);
+  homeTrackStart = Math.max(1, Math.min(homeTrackStart, maxStart));
+  const end = Math.min(maxLevel, homeTrackStart + 9);
+  $('trackRange').textContent = `第 ${homeTrackStart} – ${end} 关`;
+  $('trackPrev').disabled = homeTrackStart <= 1;
+  $('trackNext').disabled = end >= maxLevel;
+  const nodes = [];
+  for (let level = homeTrackStart; level <= end; level++) {
+    const cleared = level <= progress.highestCleared;
+    const current = level === progress.highestCleared + 1;
+    const locked = level > progress.highestCleared + 1;
+    const selected = level === progress.selectedLevel;
+    const boss = level % 5 === 0;
+    const reward = cleared ? repeatReward(level) : firstClearReward(level);
+    const status = cleared
+      ? '<span class="node-status"><svg><use href="#i-check"></use></svg>已通关</span>'
+      : current
+        ? '<span class="node-status">待挑战</span>'
+        : '<span class="node-status">未解锁</span>';
+    const rewardMarkup = locked
+      ? '<span class="node-lock"><svg><use href="#i-lock"></use></svg></span>'
+      : `<span class="node-reward"><svg><use href="#i-coin"></use></svg>+${reward}</span>`;
+    nodes.push(`
+      <button class="level-node ${cleared ? 'cleared' : ''} ${current ? 'current' : ''} ${locked ? 'locked' : ''} ${selected ? 'selected' : ''}" data-level="${level}" aria-label="第 ${level} 关${locked ? '，未解锁' : cleared ? '，已通关' : '，待挑战'}">
+        ${boss ? '<span class="node-boss">BOSS</span>' : ''}
+        <span class="node-index">LEVEL ${String(level).padStart(2, '0')}</span>
+        <strong class="node-title">第 ${level} 关</strong>
+        ${status}
+        ${rewardMarkup}
+      </button>`);
+  }
+  $('levelTrack').innerHTML = nodes.join('');
+  requestAnimationFrame(() => {
+    const selectedNode = $('levelTrack').querySelector(`[data-level="${progress.selectedLevel}"]`);
+    if (selectedNode) selectedNode.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  });
+}
+
+function renderLevelPreview() {
+  const level = progress.selectedLevel;
+  const firstClear = level === progress.highestCleared + 1;
+  const reward = firstClear ? firstClearReward(level) : repeatReward(level);
+  const boss = level % 5 === 0;
+  const scaling = levelScaling(level);
+  const enemies = enemyTypesForLevel(level)
+    .map(type => `<span class="enemy-chip ${type}"><i></i>${ZOMBIES[type].name}</span>`)
+    .join('');
+  $('levelPreview').innerHTML = `
+    <div class="preview-main">
+      <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '无尽守护'}</span>
+      <h3>第 ${level} 关<small>五波僵尸</small></h3>
+      <div class="preview-tags">
+        <span>${WAVE_COUNT} 波</span>
+        <span>${difficultyLabel(level)}</span>
+        <span>僵尸血量 ×${scaling.hp.toFixed(2)}</span>
+        ${boss ? '<span class="boss-tag">僵尸王出没</span>' : ''}
+      </div>
+      <div class="preview-enemies">${enemies}</div>
+    </div>
+    <div class="preview-action">
+      <span class="preview-reward-label">${firstClear ? '首通奖励' : '重复通关 · 30%'}</span>
+      <strong class="preview-reward"><svg><use href="#i-coin"></use></svg>+${reward}</strong>
+      <small>${firstClear ? '通关后解锁下一关' : '不推进关卡进度'}</small>
+      <button id="homeStartButton" class="primary-button home-start-button">${firstClear ? '开始守护' : '重玩本关'}<svg><use href="#i-play"></use></svg></button>
+    </div>`;
+  $('homeStartButton').addEventListener('click', () => startLevel(level));
+}
+
+function renderRoster() {
+  $('rosterGrid').innerHTML = UNIT_ORDER.map(key => {
+    const type = TYPES[key];
+    const unlocked = isUnlocked(key);
+    const initial = STARTING_UNITS.includes(key);
+    if (unlocked) {
+      return `
+        <article class="roster-card" title="${type.description}">
+          <img src="assets/${key}.png" alt="${type.name}">
+          <div class="roster-copy"><strong>${type.name}<em>${initial ? '初始' : '已解锁'}</em></strong><span>${type.role}</span></div>
+        </article>`;
+    }
+    const cost = UNLOCK_COSTS[key];
+    const affordable = progress.coins >= cost;
+    return `
+      <article class="roster-card locked" title="${type.description}">
+        <img src="assets/${key}.png" alt="${type.name}">
+        <div class="roster-copy"><strong>${type.name}</strong><span>${type.role}</span></div>
+        <button class="unlock-button" data-unlock="${key}" ${affordable ? '' : 'disabled'} title="${affordable ? `解锁${type.name}` : `还差 ${cost - progress.coins} 奶币`}">
+          <svg><use href="#i-coin"></use></svg>${cost}
+        </button>
+      </article>`;
+  }).join('');
+}
+
+function unlockUnit(key) {
+  if (!TYPES[key] || isUnlocked(key)) return;
+  const cost = UNLOCK_COSTS[key];
+  if (progress.coins < cost) {
+    toast(`还差 ${cost - progress.coins} 奶币，继续通关吧`);
+    sound('deny');
+    return;
+  }
+  progress.coins -= cost;
+  progress.unlocked.push(key);
+  saveProgress();
+  renderHome();
+  sound('unlock');
+  toast(`已解锁${TYPES[key].name}`);
+  const wallet = document.querySelector('.wallet-card');
+  wallet.classList.remove('bump');
+  void wallet.offsetWidth;
+  wallet.classList.add('bump');
+}
+
+function selectLevel(level) {
+  if (level > progress.highestCleared + 1) {
+    toast(`通关第 ${progress.highestCleared + 1} 关后解锁`);
+    sound('deny');
+    return;
+  }
+  if (progress.selectedLevel !== level) {
+    progress.selectedLevel = level;
+    saveProgress();
+    sound('select');
+  }
+  renderHome();
+}
+
+function shiftTrack(delta) {
+  const maxStart = Math.max(1, maxDisplayLevel() - 9);
+  homeTrackStart = Math.max(1, Math.min(maxStart, homeTrackStart + delta));
+  renderLevelTrack();
+}
+
+function showResetConfirm() {
+  showModal(`
+    <span class="modal-kicker">重置进度</span>
+    <h2>重新开始无尽守护？</h2>
+    <p>奶币、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
+    <div class="result-actions">
+      <button class="secondary-button" id="resetCancel">取消</button>
+      <button class="danger-button" id="resetConfirm">确认重置</button>
+    </div>`, 'compact');
+  $('resetCancel').addEventListener('click', hideModal);
+  $('resetConfirm').addEventListener('click', () => {
+    progress = defaultProgress();
+    homeTrackStart = 1;
+    saveProgress();
+    hideModal();
+    resetGame(false);
+    toast('进度已重置，重新开始吧');
+    sound('start');
+  });
 }
 
 function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = false) {
   const config = ZOMBIES[type];
+  const hp = Math.round(config.hp * game.scaling.hp);
   if (type === 'boss') row = Math.min(row, ROWS - 2);
   game.zombies.push({
     id: nextId++, type, row,
     x: 1050 + randomBetween(0, 25),
     y: type === 'boss' ? (row + 1) * ROW_H : yForRow(row),
-    hp: config.hp, maxHp: config.hp,
-    speed: config.speed, bite: config.bite,
+    hp, maxHp: hp,
+    speed: config.speed * game.scaling.speed,
+    bite: Math.round(config.bite * game.scaling.bite),
     biteTimer: .4, attackTimer: .8, eating: false,
     poisonUntil: 0, poisonTick: 0, slowUntil: 0,
     jumped: false, skillCount: 0, nextSkill: game.time + 5, enraged: false,
@@ -504,10 +860,10 @@ function update(dt) {
 
 function updateWaves() {
   let currentWave = 0;
-  LEVEL.forEach((wave, index) => { if (game.time >= wave.start) currentWave = index; });
+  game.waves.forEach((wave, index) => { if (game.time >= wave.start) currentWave = index; });
   if (currentWave !== game.wave) {
     game.wave = currentWave;
-    announce(currentWave === LEVEL.length - 1 ? '最后一波！' : `第 ${currentWave + 1} 波`);
+    announce(currentWave === game.waves.length - 1 ? '最后一波！' : `第 ${currentWave + 1} / ${game.waves.length} 波`);
     if (currentWave > 0) sound('wave');
   }
   while (game.queue.length && game.queue[0].time <= game.time) {
@@ -650,7 +1006,7 @@ function spawnEnemyProjectile(zombie, target, kind = 'acid') {
     id: nextId++, kind, targetId: target.id,
     x: zombie.x - 25, y: zombie.y - 30,
     speed: bossShot ? 230 : 280,
-    damage: bossShot ? 80 : ZOMBIES.spitter.damage
+    damage: Math.round((bossShot ? 80 : ZOMBIES.spitter.damage) * game.scaling.bite)
   });
   spawnEffect(bossShot ? '巨石！' : '腐蚀液！', zombie.x, zombie.y - 65, 'combat-text damage');
   sound(bossShot ? 'fire' : 'throw');
@@ -982,19 +1338,66 @@ function finishGame(won) {
   stopBabyPerformances();
   updatePauseButton();
   sound(won ? 'win' : 'lose');
-  const title = won ? '小院守住了！' : '僵尸闯进奶家了';
-  const copy = won ? '奶家人齐心协力，击退了全部五波僵尸。' : '别灰心，多种奶蛋发展奶黄，把奶虎和奶牛放在前排。';
+  const level = game.levelIndex;
+  const firstClear = won && level === progress.highestCleared + 1;
+  const reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
+  if (won) {
+    progress.coins += reward;
+    progress.totalEarned += reward;
+    if (firstClear) {
+      progress.highestCleared = level;
+      progress.selectedLevel = level + 1;
+    }
+    saveProgress();
+  }
+  renderHome();
+  lastResult = {
+    won, level, reward, firstClear, coins: progress.coins,
+    kills: game.kills, collected: game.collected, placed: game.placed
+  };
+  showResult(lastResult);
+}
+
+function showResult(result) {
+  if (!result) { showHome(); return; }
+  const { won, level, reward, firstClear } = result;
+  const title = won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
+  const copy = won
+    ? firstClear
+      ? `首次通关第 ${level} 关，奶币已经到账，第 ${level + 1} 关正式解锁。`
+      : `再次守住第 ${level} 关，重复挑战获得首通奖励的 30%。`
+    : `第 ${level} 关防守失败。失败不扣奶币，调整阵容再来一次。`;
+  const rewardBox = won
+    ? `<div class="result-reward">
+        <svg><use href="#i-coin"></use></svg>
+        <div><strong>+${reward}</strong><span>${firstClear ? '首通奖励' : '重复通关 · 30% 奖励'}</span></div>
+        <small>奶币余额 ${result.coins}</small>
+      </div>`
+    : '<div class="result-reward muted"><span>本局没有奶币奖励 · 失败不扣奶币</span></div>';
+  const actions = won
+    ? `<div class="result-actions">
+        <button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>
+        <button class="secondary-button" id="resultRetry">重玩本关</button>
+        <button class="ghost-button" id="resultHome">返回主页</button>
+      </div>`
+    : `<div class="result-actions">
+        <button class="primary-button" id="resultRetry">再试一次<svg><use href="#i-restart"></use></svg></button>
+        <button class="ghost-button" id="resultHome">返回主页</button>
+      </div>`;
   showModal(`
-    <span class="modal-kicker">${won ? '守护成功' : '本局结束'}</span>
+    <span class="modal-kicker">${won ? `第 ${level} 关 · 守护成功` : '本局结束'}</span>
     <h2>${title}</h2>
     <p>${copy}</p>
     <div class="result-stats">
-      <div><strong>${game.kills}</strong><span>击退僵尸</span></div>
-      <div><strong>${game.collected}</strong><span>收集奶黄</span></div>
-      <div><strong>${game.placed}</strong><span>放置角色</span></div>
+      <div><strong>${result.kills}</strong><span>击退僵尸</span></div>
+      <div><strong>${result.collected}</strong><span>收集奶黄</span></div>
+      <div><strong>${result.placed}</strong><span>放置角色</span></div>
     </div>
-    <div class="modal-actions"><button class="primary-button" id="againButton">再玩一局<svg><use href="#i-restart"></use></svg></button></div>`, 'compact');
-  $('againButton').addEventListener('click', startGame);
+    ${rewardBox}
+    ${actions}`, 'compact');
+  $('nextLevelButton')?.addEventListener('click', () => startLevel(level + 1));
+  $('resultRetry').addEventListener('click', restartLevel);
+  $('resultHome').addEventListener('click', leaveToHome);
 }
 
 function syncCollection(kind, items, create, updateElement) {
@@ -1080,7 +1483,7 @@ function render() {
   }, setEntityPosition);
 
   $('custardCount').textContent = game.custard;
-  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${LEVEL.length} 波`;
+  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${game.waves.length || WAVE_COUNT} 波`;
   $('levelProgress').style.width = `${game.kills / game.total * 100}%`;
   $('progressText').textContent = `${game.kills} / ${game.total}`;
   const boss = game.zombies.find(zombie => zombie.type === 'boss' && !zombie.dying);
@@ -1153,16 +1556,14 @@ function showModal(content, className = '') {
 
 function hideModal() { $('modal').classList.remove('visible'); }
 
-function showStart() {
+function showPauseModal() {
   showModal(`
-    <div class="modal-art"><img class="hero-rat" src="assets/rat.png" alt="奶鼠"><img class="hero-egg" src="assets/egg.png" alt="奶蛋"><img class="hero-dragon" src="assets/dragon.png" alt="奶龙"></div>
-    <span class="modal-kicker">奶家小院 · 第一关</span>
-    <h2>奶家人，集合！</h2>
-    <p>收集奶黄，种下奶家人，守住五行小院。</p>
-    <div class="start-rules"><span><b>01</b>奶蛋持续产奶黄</span><span><b>02</b>十二生肖各怀本领</span><span><b>03</b>奶娃大笑清空一行</span></div>
-    <button id="startButton" class="primary-button">开始守护<svg><use href="#i-play"></use></svg></button>
-    <small>鼠标操作 · 空格暂停 · 支持 2 倍速</small>`, 'start-card');
-  $('startButton').addEventListener('click', startGame);
+    <span class="modal-kicker">休息一下</span><h2>游戏已暂停</h2><p>奶家人和僵尸都在原地等你。</p>
+    <div class="result-actions"><button class="primary-button" id="resumeButton">继续游戏<svg><use href="#i-play"></use></svg></button><button class="secondary-button" id="pauseRestart">重新开局</button><button class="ghost-button" id="pauseHome">返回主页</button></div>
+    <small>按空格也可以继续</small>`, 'compact');
+  $('resumeButton').addEventListener('click', resumeGame);
+  $('pauseRestart').addEventListener('click', restartLevel);
+  $('pauseHome').addEventListener('click', leaveToHome);
 }
 
 function togglePause() {
@@ -1171,15 +1572,26 @@ function togglePause() {
     game.state = 'paused';
     pauseBabyPerformances();
     updatePauseButton();
-    showModal(`
-      <span class="modal-kicker">休息一下</span><h2>游戏已暂停</h2><p>奶家人和僵尸都在原地等你。</p>
-      <div class="modal-actions"><button class="primary-button" id="resumeButton">继续游戏<svg><use href="#i-play"></use></svg></button><button class="secondary-button" id="pauseRestart">重新开局</button></div>
-      <small>按空格也可以继续</small>`, 'compact');
-    $('resumeButton').addEventListener('click', resumeGame);
-    $('pauseRestart').addEventListener('click', startGame);
+    showPauseModal();
   } else if (game.state === 'paused') {
     resumeGame();
   }
+}
+
+function requestHome() {
+  if (game.state !== 'running') {
+    leaveToHome();
+    return;
+  }
+  cancelCardDrag();
+  game.state = 'paused';
+  pauseBabyPerformances();
+  updatePauseButton();
+  showModal(`
+    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>本局进度不会保留，奶币与通关记录不受影响。</p>
+    <div class="result-actions"><button class="secondary-button" id="leaveCancel">继续守护</button><button class="danger-button" id="leaveConfirm">返回主页</button></div>`, 'compact');
+  $('leaveCancel').addEventListener('click', resumeGame);
+  $('leaveConfirm').addEventListener('click', leaveToHome);
 }
 
 function resumeGame() {
@@ -1201,31 +1613,28 @@ function showHelp() {
     cancelCardDrag();
     game.state = 'paused';
     pauseBabyPerformances();
+    updatePauseButton();
   }
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
+      <div><strong>关卡与奶币</strong><br>每一关有五波僵尸。首次通关获得全额奶币并解锁下一关；重复挑战旧关卡获得 30% 奶币；失败不扣奶币。</div>
+      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶币解锁，解锁后永久可用。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
-      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每次只能用一次。</div>
-      <div><strong>僵尸王</strong><br>僵尸王占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
-      <div><strong>阵容搭配</strong><br>奶蛋与奶猪发展经济，奶牛与奶虎守前排，奶鸡提升本行攻速，奶兔治疗周围伙伴。</div>
+      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
+      <div><strong>僵尸王</strong><br>每 5 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
     <button class="primary-button" id="helpClose">知道了</button>`, 'compact');
   $('helpClose').addEventListener('click', () => {
-    if (previous === 'ready') showStart();
-    else if (previous === 'won' || previous === 'lost') {
-      game.state = 'running';
-      finishGame(previous === 'won');
+    if (previous === 'running') {
+      resumeGame();
+    } else if (previous === 'paused') {
+      showPauseModal();
+    } else if (previous === 'won' || previous === 'lost') {
+      showResult(lastResult);
     } else {
-      game.state = previous === 'paused' ? 'paused' : 'running';
-      if (game.state === 'paused') {
-        game.state = 'running';
-        togglePause();
-      } else {
-        hideModal();
-        resumeBabyPerformances();
-      }
+      showHome();
     }
     updatePauseButton();
     lastFrame = performance.now();
@@ -1331,8 +1740,20 @@ $('shovelButton').addEventListener('click', () => {
   updateCards();
 });
 $('pauseButton').addEventListener('click', togglePause);
-$('restartButton').addEventListener('click', startGame);
+$('restartButton').addEventListener('click', restartLevel);
+$('homeButton').addEventListener('click', requestHome);
 $('helpButton').addEventListener('click', showHelp);
+$('resetProgressButton').addEventListener('click', showResetConfirm);
+$('trackPrev').addEventListener('click', () => shiftTrack(-10));
+$('trackNext').addEventListener('click', () => shiftTrack(10));
+$('levelTrack').addEventListener('click', event => {
+  const node = event.target.closest('[data-level]');
+  if (node) selectLevel(Number(node.dataset.level));
+});
+$('rosterGrid').addEventListener('click', event => {
+  const button = event.target.closest('[data-unlock]');
+  if (button) unlockUnit(button.dataset.unlock);
+});
 $('speedButton').addEventListener('click', () => {
   game.speed = game.speed === 1 ? 2 : 1;
   $('speedButton').textContent = `${game.speed}×`;

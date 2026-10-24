@@ -7,7 +7,7 @@
   <title>奶龙大战僵尸 · 奶家小院</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="home-open">
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg">
     <symbol id="i-custard" viewBox="0 0 48 48">
       <path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/>
@@ -21,10 +21,85 @@
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 2-2.4 2-2.4 4m0 3h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-shovel" viewBox="0 0 24 24"><path d="m14 4 6 6-3 3-6-6m3 3-8 8m-2 3c-2-1-3-2-2-4s2-3 4-2l3 3c1 2-1 4-3 5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6V2Z" fill="currentColor"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v9h5v-6h4v6h5v-9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="24" cy="24" r="13" fill="currentColor" opacity=".18"/><path d="M24 13c2.7 4.6 7.3 6.2 7.3 11.2a7.3 7.3 0 1 1-14.6 0C16.7 19.2 21.3 17.6 24 13Z" fill="currentColor"/></symbol>
   </svg>
 
   <div class="page-decor cloud-one"></div>
   <div class="page-decor cloud-two"></div>
+
+  <div id="homeScreen" class="home-screen visible" aria-label="奶龙大战僵尸主页面">
+    <div class="home-orb orb-one"></div>
+    <div class="home-orb orb-two"></div>
+    <div class="home-shell">
+      <header class="home-header glass-panel">
+        <div class="home-brand">
+          <div class="brand-badge"><img src="assets/dragon.png" alt="奶龙"></div>
+          <div>
+            <span class="eyebrow">NAILONG VS ZOMBIES</span>
+            <h1>奶龙大战僵尸</h1>
+            <p>无尽守护 <span></span> 奶家小院</p>
+          </div>
+        </div>
+        <div class="wallet-card" aria-label="奶币记录">
+          <div class="wallet-coin"><svg><use href="#i-coin"></use></svg></div>
+          <div class="wallet-balance"><span>奶币余额</span><strong id="homeCoins" aria-live="polite">0</strong></div>
+          <div class="wallet-stats">
+            <span>累计获得 <b id="homeEarned">0</b></span>
+            <span>已通关 <b id="homeCleared">0</b> 关</span>
+            <span>已解锁 <b id="homeUnlocked">4</b> / 13</span>
+          </div>
+        </div>
+        <button id="resetProgressButton" class="ghost-button" title="清空奶币、解锁与关卡记录">重置进度</button>
+      </header>
+
+      <main class="home-main">
+        <section class="home-level-panel glass-panel">
+          <div class="home-section-head">
+            <div>
+              <span class="eyebrow">ENDLESS GARDEN</span>
+              <h2>无尽守护</h2>
+              <p>每关五波，难度逐关上升，每 5 关迎战僵尸王。</p>
+            </div>
+            <span class="progress-chip">下一关 <b id="homeNextLevel">1</b></span>
+          </div>
+          <div class="level-track-wrap">
+            <button class="track-arrow" id="trackPrev" aria-label="查看更早的关卡">‹</button>
+            <div class="level-track-shell">
+              <span class="track-range" id="trackRange">第 1 – 5 关</span>
+              <div id="levelTrack" class="level-track" aria-label="关卡选择"></div>
+            </div>
+            <button class="track-arrow" id="trackNext" aria-label="查看更后的关卡">›</button>
+          </div>
+          <div id="levelPreview" class="level-preview"></div>
+          <div class="home-tips">
+            <span>首通奖励全额奶币</span>
+            <span>重复通关获得 30%</span>
+            <span>失败不扣奶币</span>
+          </div>
+        </section>
+
+        <aside class="home-roster-panel glass-panel">
+          <div class="home-section-head">
+            <div>
+              <span class="eyebrow">NAI FAMILY</span>
+              <h2>奶家人图鉴</h2>
+            </div>
+            <span class="progress-chip">已解锁 <b id="homeRosterCount">4</b> / 13</span>
+          </div>
+          <div id="rosterGrid" class="roster-grid"></div>
+          <p class="roster-tip">通关获得奶币，解锁角色永久保留。初始四人始终可用。</p>
+        </aside>
+      </main>
+
+      <footer class="home-footer">
+        <span>进度自动保存在本机浏览器</span>
+        <span>拖动种植 · 点击奶娃大笑 · 空格暂停</span>
+      </footer>
+    </div>
+  </div>
 
   <div id="app">
     <header class="topbar glass-panel">
@@ -32,7 +107,7 @@
         <div class="brand-badge"><img src="assets/dragon.png" alt="奶龙"></div>
         <div>
           <h1>奶龙大战僵尸</h1>
-          <p>奶家小院 <span></span> 第 1 关</p>
+          <p>无尽守护 <span></span> <b id="brandLevel">第 1 关</b></p>
         </div>
       </div>
       <div class="top-actions">
@@ -41,6 +116,7 @@
           <strong id="custardCount">150</strong>
           <span>奶黄</span>
         </div>
+        <button class="icon-button" id="homeButton" title="返回主页" aria-label="返回主页"><svg><use href="#i-home"></use></svg></button>
         <button class="icon-button" id="helpButton" title="玩法说明" aria-label="玩法说明"><svg><use href="#i-help"></use></svg></button>
         <button class="icon-button" id="soundButton" title="关闭声音" aria-label="关闭声音"><svg><use href="#i-sound"></use></svg></button>
         <button class="control-button" id="speedButton" title="切换游戏速度">1×</button>
@@ -53,7 +129,7 @@
       <aside class="deck-panel glass-panel">
         <div class="panel-heading">
           <div><span class="eyebrow">NAI FAMILY</span><h2>选择奶家人</h2></div>
-          <span class="unit-count">13 位</span>
+          <span id="unitCount" class="unit-count">可用 4 / 13</span>
         </div>
         <div id="cardGrid" class="card-grid" aria-label="奶家人卡牌"></div>
         <div id="unitDetail" class="unit-detail">
@@ -99,25 +175,7 @@
     </main>
   </div>
 
-  <div id="modal" class="modal visible" role="dialog" aria-modal="true">
-    <div class="modal-card start-card">
-      <div class="modal-art">
-        <img class="hero-egg" src="assets/egg.png" alt="奶蛋">
-        <img class="hero-rat" src="assets/rat.png" alt="奶鼠">
-        <img class="hero-dragon" src="assets/dragon.png" alt="奶龙">
-      </div>
-      <span class="modal-kicker">奶家小院 · 第一关</span>
-      <h2>奶家人，集合！</h2>
-      <p>收集奶黄，种下奶家人，守住五行小院。</p>
-      <div class="start-rules">
-        <span><b>01</b>奶蛋持续产奶黄</span>
-        <span><b>02</b>十二生肖各怀本领</span>
-        <span><b>03</b>奶娃大笑清普通怪</span>
-      </div>
-      <button id="startButton" class="primary-button">开始守护<svg><use href="#i-play"></use></svg></button>
-      <small>鼠标操作 · 空格暂停 · 支持 2 倍速</small>
-    </div>
-  </div>
+  <div id="modal" class="modal" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast" role="status"></div>
 
   <script src="game.js"></script>
