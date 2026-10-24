@@ -1180,7 +1180,8 @@ function updateZombies(dt) {
     if (zombie.dying) continue;
     if (zombie.poisonUntil > game.time && game.time >= zombie.poisonTick) {
       zombie.poisonTick += .5;
-      damageZombie(zombie, 4);
+      const dotMul = applyModeAUpgrades().babyDotMul;
+      damageZombie(zombie, Math.floor(4 * dotMul));
       if (zombie.dying) continue;
     }
     if (zombie.type === 'boss') updateBossSkill(zombie);
