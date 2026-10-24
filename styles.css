@@ -349,10 +349,7 @@ body.home-open #app { visibility: hidden; }
 .roster-card.locked { background: linear-gradient(145deg, #f5f5ef, #e6eae0); border-color: #d8ded3; }
 .roster-card.locked > img { opacity: .36; filter: grayscale(1); }
 .roster-card.locked .roster-copy strong { color: #727e6c; }
-.unlock-button { flex: 0 0 auto; height: 27px; padding: 0 7px; border: 1px solid #e3be58; border-radius: 8px; background: linear-gradient(145deg, #fff3b3, #f2c854); color: #7d5712; display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 900; cursor: pointer; transition: .16s; }
-.unlock-button svg { width: 11px; height: 11px; }
-.unlock-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 9px #ad83283a; }
-.unlock-button:disabled { border-color: #d5dacf; background: #e9ece4; color: #9aa493; cursor: not-allowed; }
+.unlock-requirement { flex: 0 0 auto; font-size: 9px; font-weight: 900; color: #7d5712; background: linear-gradient(145deg, #fff3b3, #f2c854); border-radius: 8px; padding: 3px 8px; white-space: nowrap; }
 .roster-tip { margin: 12px 2px 0; font-size: 9px; line-height: 1.6; color: #8b9880; }
 .home-footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px 8px 0; color: #87957d; font-size: 9px; font-weight: 700; }
 

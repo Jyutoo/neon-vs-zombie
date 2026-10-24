@@ -38,7 +38,10 @@ const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitte
 
 const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
 const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster', 'pig', 'horse', 'dragon'];
-const UNLOCK_COSTS = { rat: 100, rabbit: 140, dog: 160, tiger: 220, goat: 240, rooster: 260, pig: 280, horse: 320, dragon: 380 };
+const CHARACTER_UNLOCK_LEVELS = {
+  rat: 2, rabbit: 3, dog: 4, tiger: 5,
+  goat: 6, rooster: 7, pig: 8, horse: 9, dragon: 10
+};
 const V1_SAVE_KEY = 'nailong-vs-zombies-progress-v1';
 const SAVE_KEY = 'nailong-vs-zombies-progress-v2';
 function levelWaveCount(level) {
@@ -149,6 +152,20 @@ let lastResult = null;
 
 function isUnlocked(key) {
   return progress.unlocked.includes(key);
+}
+
+function checkCharacterUnlocks() {
+  let newUnlocks = [];
+  for (const [char, level] of Object.entries(CHARACTER_UNLOCK_LEVELS)) {
+    if (progress.highestCleared >= level && !progress.unlocked.includes(char)) {
+      progress.unlocked.push(char);
+      newUnlocks.push(TYPES[char].name);
+    }
+  }
+  if (newUnlocks.length > 0) {
+    saveProgress();
+    toast(`解锁新角色：${newUnlocks.join('、')}`);
+  }
 }
 
 function seededRandom(seed) {
@@ -355,7 +372,7 @@ function applyCardLocks() {
     const locked = !isUnlocked(key);
     card.classList.toggle('locked', locked);
     card.setAttribute('aria-disabled', String(locked));
-    card.title = locked ? `通关获得奶黄后，在主页面解锁${TYPES[key].name}` : '';
+    card.title = locked && CHARACTER_UNLOCK_LEVELS[key] ? `通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关解锁${TYPES[key].name}` : '';
   });
   $('unitCount').textContent = `可用 ${progress.unlocked.length} / ${Object.keys(TYPES).length}`;
 }
@@ -490,7 +507,7 @@ function showUnitDetail(key) {
     $('unitDetail').innerHTML = `
       <div class="detail-title"><strong>${type.name}</strong><span>${type.role}</span></div>
       <p>${type.description}</p>
-      <div class="detail-stats"><span>未解锁</span><span>主页解锁需 ${UNLOCK_COSTS[key]} 奶黄</span></div>`;
+      <div class="detail-stats"><span>未解锁</span><span>通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关解锁</span></div>`;
     return;
   }
   $('unitDetail').innerHTML = `
@@ -504,7 +521,7 @@ function selectUnit(key) {
   const type = TYPES[key];
   showUnitDetail(key);
   if (!isUnlocked(key)) {
-    toast(`${type.name}尚未解锁，返回主页用 ${UNLOCK_COSTS[key]} 奶黄解锁`);
+    toast(`${type.name}尚未解锁，通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关后解锁`);
     shakeCard(key);
     sound('deny');
     return;
@@ -797,37 +814,14 @@ function renderRoster() {
           <div class="roster-copy"><strong>${type.name}<em>${initial ? '初始' : '已解锁'}</em></strong><span>${type.role}</span></div>
         </article>`;
     }
-    const cost = UNLOCK_COSTS[key];
-    const affordable = progress.custard >= cost;
+    const requiredLevel = CHARACTER_UNLOCK_LEVELS[key];
     return `
       <article class="roster-card locked" title="${type.description}">
         <img src="assets/${key}.png" alt="${type.name}">
         <div class="roster-copy"><strong>${type.name}</strong><span>${type.role}</span></div>
-        <button class="unlock-button" data-unlock="${key}" ${affordable ? '' : 'disabled'} title="${affordable ? `解锁${type.name}` : `还差 ${cost - progress.custard} 奶黄`}">
-          <svg><use href="#i-coin"></use></svg>${cost}
-        </button>
+        <span class="unlock-requirement">通关第 ${requiredLevel} 关解锁</span>
       </article>`;
   }).join('');
-}
-
-function unlockUnit(key) {
-  if (!TYPES[key] || isUnlocked(key)) return;
-  const cost = UNLOCK_COSTS[key];
-  if (progress.custard < cost) {
-    toast(`还差 ${cost - progress.custard} 奶黄，继续通关吧`);
-    sound('deny');
-    return;
-  }
-  progress.custard -= cost;
-  progress.unlocked.push(key);
-  saveProgress();
-  renderHome();
-  sound('unlock');
-  toast(`已解锁${TYPES[key].name}`);
-  const wallet = document.querySelector('.wallet-card');
-  wallet.classList.remove('bump');
-  void wallet.offsetWidth;
-  wallet.classList.add('bump');
 }
 
 function selectLevel(level) {
@@ -1425,6 +1419,7 @@ function finishGame(won) {
     if (firstClear) {
       progress.highestCleared = level;
       progress.selectedLevel = level + 1;
+      checkCharacterUnlocks();
     }
     saveProgress();
   }
@@ -1697,7 +1692,7 @@ function showHelp() {
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
       <div><strong>关卡与奶黄</strong><br>每关有多波僵尸（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
-      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶黄解锁，解锁后永久可用。</div>
+      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人通过通关对应关卡自动解锁（通关第 2 关解锁奶鼠，第 3 关解锁奶兔，依此类推）。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
       <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
       <div><strong>僵尸王</strong><br>第 12 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
@@ -1827,10 +1822,6 @@ $('trackNext').addEventListener('click', () => shiftTrack(10));
 $('levelTrack').addEventListener('click', event => {
   const node = event.target.closest('[data-level]');
   if (node) selectLevel(Number(node.dataset.level));
-});
-$('rosterGrid').addEventListener('click', event => {
-  const button = event.target.closest('[data-unlock]');
-  if (button) unlockUnit(button.dataset.unlock);
 });
 $('speedButton').addEventListener('click', () => {
   game.speed = game.speed === 1 ? 2 : 1;
