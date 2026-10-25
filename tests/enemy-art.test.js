@@ -126,3 +126,29 @@ test('假护甲样式与调色滤镜已从 action.css 删除', () => {
   }
   assert.ok(!css.includes('hue-rotate(310deg)'), '.elite 调色滤镜仍在');
 });
+
+function sourceFiles() {
+  const out = [];
+  for (const dir of [path.join(SRC, 'js'), SRC]) {
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (fs.statSync(full).isFile() && /\.(js|html)$/.test(entry)) out.push(full);
+    }
+  }
+  return out;
+}
+
+test('src 下的 js 与 html 不再引用 assets/zombie.png', () => {
+  const hits = sourceFiles().filter(f => fs.readFileSync(f, 'utf8').includes('assets/zombie.png'));
+  assert.deepEqual(hits.map(f => path.relative(SRC, f)), [], '仍在引用旧僵尸图');
+});
+
+test('src 下的 js 与 html 可见文案不再出现"僵尸"', () => {
+  const hits = [];
+  for (const file of sourceFiles()) {
+    fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+      if (line.includes('僵尸')) hits.push(`${path.relative(SRC, file)}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(hits, [], '仍有含"僵尸"的文案');
+});
