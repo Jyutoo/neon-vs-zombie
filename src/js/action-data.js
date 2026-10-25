@@ -70,14 +70,15 @@
       }
     },
     enemies: {
-      basic: { name: '普通僵尸', hp: 60, speed: 62, damage: 8, range: 58, interval: 1.2, windup: 0.35, xp: 8, knockbackResist: 1, scale: 1 },
-      cone: { name: '路障僵尸', hp: 100, speed: 58, damage: 10, range: 62, interval: 1.3, windup: 0.4, xp: 12, knockbackResist: 0.9, scale: 1 },
-      bucket: { name: '铁桶僵尸', hp: 180, speed: 48, damage: 14, range: 66, interval: 1.5, windup: 0.5, xp: 18, knockbackResist: 0.55, scale: 1 },
-      runner: { name: '快速僵尸', hp: 45, speed: 105, damage: 6, range: 54, interval: 0.9, windup: 0.25, xp: 6, knockbackResist: 1.2, scale: 0.92 },
-      elite: { name: '精英铁桶', hp: 340, speed: 52, damage: 18, range: 70, interval: 1.4, windup: 0.5, xp: 35, knockbackResist: 0.35, scale: 1.3 }
+      basic: { name: '奶豆', image: 'assets/enemies/naidou.png', hp: 60, speed: 62, damage: 8, range: 58, interval: 1.2, windup: 0.35, xp: 8, knockbackResist: 1, scale: 1 },
+      cone: { name: '肥嘟嘟', image: 'assets/enemies/feidudu.png', hp: 100, speed: 58, damage: 10, range: 62, interval: 1.3, windup: 0.4, xp: 12, knockbackResist: 0.9, scale: 1 },
+      bucket: { name: '牛来', image: 'assets/enemies/niulai.png', hp: 180, speed: 48, damage: 14, range: 66, interval: 1.5, windup: 0.5, xp: 18, knockbackResist: 0.55, scale: 1 },
+      runner: { name: '豆脚', image: 'assets/enemies/doujiao.png', hp: 45, speed: 105, damage: 6, range: 54, interval: 0.9, windup: 0.25, xp: 6, knockbackResist: 1.2, scale: 0.92 },
+      elite: { name: '咕咕嘎嘎', image: 'assets/enemies/gugugaga.png', hp: 340, speed: 52, damage: 18, range: 70, interval: 1.4, windup: 0.5, xp: 35, knockbackResist: 0.35, scale: 1.3 }
     },
     boss: {
-      name: '僵尸王',
+      name: '奶康',
+      image: 'assets/enemies/naikang.png',
       hp: 1200,
       speed: 55,
       xp: 100,

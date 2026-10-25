@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { boot } = require('./helpers/browser-env');
+const DATA = require('../src/js/action-data.js');
 
 const SRC = path.resolve(__dirname, '..', 'src');
 const ENEMIES_DIR = path.join(SRC, 'assets', 'enemies');
@@ -82,4 +83,46 @@ test('模式A 渲染不再产出假护甲节点', () => {
   for (const type of Object.keys(ART)) {
     assert.ok(markup.includes(ART[type].file), `没有渲染 ${ART[type].file}`);
   }
+});
+
+test('模式B enemies 与 boss 都有 image、文件在磁盘上、名字不含"僵尸"', () => {
+  assert.deepEqual(Object.keys(DATA.enemies), ['basic', 'cone', 'bucket', 'runner', 'elite']);
+  const table = { ...DATA.enemies, boss: DATA.boss };
+  for (const [type, cfg] of Object.entries(table)) {
+    assert.ok(cfg.image, `${type} 缺 image 字段`);
+    assert.ok(fs.existsSync(path.join(SRC, cfg.image)), `${type} 的 ${cfg.image} 不在磁盘上`);
+    assert.ok(!cfg.name.includes('僵尸'), `${type} 仍叫「${cfg.name}」`);
+  }
+  assert.equal(DATA.enemies.elite.image, 'assets/enemies/gugugaga.png');
+  assert.equal(DATA.boss.image, 'assets/enemies/naikang.png');
+});
+
+test('模式B 渲染不再注入假护甲', () => {
+  const env = boot({
+    files: ['progress.js', 'action-data.js', 'action-logic.js', 'action.js'],
+    search: '?mode=level&level=1'
+  });
+  const api = env.global.window.__nailong;
+  api.state.sound = false;
+  const spawned = Object.keys(DATA.enemies).map((type, i) => api.spawnEnemy(type, 900 + i * 40));
+  const boss = api.spawnBoss();
+  api.update(0.016);   // update() 在 action.js:1187 调 syncEnemyElements()，走真实渲染路径
+  const markup = [...spawned, boss].map(enemy => enemy.el.innerHTML).join('\n');
+  assert.equal([...spawned, boss].length, 6, '5 种杂兵 + Boss 应各一只');
+  assert.ok(markup, '没有取到任何敌人 DOM，探针失效');
+  for (const cls of ['armor', 'cone-armor', 'bucket-armor', 'boss-armor', 'boss-crown']) {
+    assert.ok(!markup.includes(cls), `仍在渲染 .${cls} 节点`);
+  }
+  for (const cfg of Object.values(DATA.enemies)) {
+    assert.ok(markup.includes(cfg.image.split('/').pop()), `没有渲染 ${cfg.image}`);
+  }
+  assert.ok(markup.includes('naikang.png'), '没有渲染 Boss 形象');
+});
+
+test('假护甲样式与调色滤镜已从 action.css 删除', () => {
+  const css = fs.readFileSync(path.join(SRC, 'css', 'action.css'), 'utf8');
+  for (const cls of ['.armor', '.cone-armor', '.bucket-armor', '.boss-armor', '.boss-crown']) {
+    assert.ok(!css.includes(cls), `action.css 仍保留 ${cls}`);
+  }
+  assert.ok(!css.includes('hue-rotate(310deg)'), '.elite 调色滤镜仍在');
 });

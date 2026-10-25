@@ -971,13 +971,6 @@
     setTimeout(() => el.remove(), life);
   }
 
-  function armorMarkup(type) {
-    if (type === 'boss') return '<div class="armor boss-armor"></div><div class="boss-crown"></div>';
-    if (type === 'cone') return '<div class="armor cone-armor"></div>';
-    if (type === 'bucket' || type === 'elite') return '<div class="armor bucket-armor"></div>';
-    return '';
-  }
-
   function syncEnemyElements() {
     for (const enemy of state.enemies) {
       if (!enemy.el) {
@@ -985,7 +978,7 @@
         el.className = `enemy ${enemy.type}`;
         el.style.width = `${72 * enemy.cfg.scale}px`;
         el.style.height = `${124 * enemy.cfg.scale}px`;
-        el.innerHTML = `<img src="assets/zombie.png" alt="${enemy.cfg.name}">${armorMarkup(enemy.type)}<div class="enemy-hp"><div></div></div>`;
+        el.innerHTML = `<img src="${enemy.cfg.image}" alt="${enemy.cfg.name}"><div class="enemy-hp"><div></div></div>`;
         enemy.el = el;
         enemyLayer.appendChild(el);
       }
