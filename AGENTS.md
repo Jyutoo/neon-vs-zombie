@@ -20,7 +20,7 @@
 ## 文件职责
 
 ```
-src/index.html + src/css/menu.css + src/js/menu.js      主菜单（三张模式卡 + 奶黄余额横幅）
+src/index.html + src/css/menu.css + src/js/menu.js      主菜单（庭院背景、两个并列玩法入口、顶栏余额与强化入口）
 src/js/progress.js                                      唯一存档层（读/迁移/归一化/写），UMD 同时供 Node 测试
 src/game.html + src/css/styles.css + src/js/game.js     模式A：塔防主逻辑与关卡选择页
 src/action.html + action.css + action.js                模式B：横版格斗主逻辑

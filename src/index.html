@@ -8,60 +8,48 @@
   <link rel="stylesheet" href="css/menu.css">
 </head>
 <body>
-  <div class="menu-bg" aria-hidden="true">
-    <div class="cloud cloud-a"></div>
-    <div class="cloud cloud-b"></div>
-    <div class="hill hill-back"></div>
-    <div class="hill hill-front"></div>
-    <div class="fence"></div>
-    <div class="grass"></div>
-  </div>
+  <div class="menu-bg" aria-hidden="true"></div>
 
   <main class="menu-shell">
+    <header class="site-header">
+      <a class="wordmark" href="index.html" aria-label="奶家人的奇妙冒险首页">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V15M16 19C5 21 2 13 3 7c9-1 14 3 13 12Zm0-4C15 6 21 2 29 3c1 8-4 13-13 12Z" fill="currentColor"/></svg>
+        <span>奶家人的奇妙冒险</span>
+      </a>
+      <nav class="header-actions" aria-label="首页工具">
+        <div class="custard-balance" aria-label="奶黄余额">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/><path d="M17 17c3-4 7-5 10-5" fill="none" stroke="#fff9c9" stroke-width="4" stroke-linecap="round"/></svg>
+          <strong data-custard-balance>--</strong><span>奶黄</span>
+        </div>
+        <button class="text-button" type="button" data-open="helpModal">玩法说明</button>
+        <a class="upgrade-entry" href="upgrade.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>强化奶娃</a>
+      </nav>
+    </header>
     <header class="hero">
-      <div class="hero-cast">
-        <img class="hero-zombie" src="assets/enemies/naikang.png" alt="奶康">
-        <img class="hero-dragon" src="assets/dragon.png" alt="奶龙">
+      <div class="hero-copy">
+        <h1>奶家人的<br>奇妙冒险</h1>
+        <p class="subtitle">奶家小院保卫战</p>
+        <p class="hero-description">收集奶黄，布置防线，或亲自上阵。</p>
       </div>
-      <p class="eyebrow">NAI FAMILY DEFENSE</p>
-      <h1>奶家人的奇妙冒险</h1>
-      <p class="subtitle">奶家小院保卫战</p>
     </header>
 
     <section class="mode-grid" aria-label="选择模式">
       <a class="mode-card adventure" href="game.html">
-        <span class="mode-tag">冒险模式</span>
         <img src="assets/egg.png" alt="">
-        <strong>守住奶家小院</strong>
-        <p>收集奶黄，种植十二生肖，守住 12 关庭院。</p>
-        <span class="mode-cta">进入第 1 关</span>
+        <div class="mode-copy"><strong>庭院守护</strong><p>收集奶黄，布置防线<br>守住 12 关庭院</p></div>
+        <span class="mode-arrow" aria-hidden="true">→</span>
       </a>
 
       <button class="mode-card action" id="actionModeCard" type="button" data-open="modeModal">
-        <span class="mode-tag">邪恶家人来袭</span>
         <img src="assets/dragon.png" alt="">
-        <strong>亲自上阵</strong>
-        <p>横版格斗闯关，逐段清怪决战奶康；或挑战无尽波次。</p>
-        <span class="mode-cta">选择模式</span>
+        <div class="mode-copy"><strong>亲自上阵</strong><p>横版闯关，迎战奶康<br>或挑战无尽波次</p></div>
+        <span class="mode-arrow" aria-hidden="true">→</span>
       </button>
-
-      <a class="mode-card upgrade" href="upgrade.html">
-        <span class="mode-tag">强化奶娃</span>
-        <img src="assets/baby-glance.png" alt="">
-        <strong>强化奶娃</strong>
-        <p>使用奶黄提升奶娃能力，强化效果带入所有模式。</p>
-        <span class="mode-cta">进入强化</span>
-      </a>
     </section>
 
-    <div class="custard-banner">
-      <svg width="28" height="28" viewBox="0 0 48 48" style="color:#f5c94c"><path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/><path d="M17 17c3-4 7-5 10-5" fill="none" stroke="#fff9c9" stroke-width="4" stroke-linecap="round" opacity=".85"/></svg>
-      <span>奶黄余额：</span><strong data-custard-balance>--</strong>
-    </div>
-
     <footer class="menu-footer">
-      <button class="text-button" type="button" data-open="helpModal">玩法说明</button>
-      <span>v1.2 · 原生 HTML / CSS / JS</span>
+      <span>一方小院，一群伙伴。</span>
+      <span>v1.2</span>
     </footer>
   </main>
 
