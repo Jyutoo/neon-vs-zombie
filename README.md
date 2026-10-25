@@ -4,7 +4,7 @@
 
 从庭院出发，收集奶黄、布置防线，或操控奶娃亲自迎战奶康。使用原生 HTML、CSS、JavaScript，无需安装依赖或构建。
 
-**[在线试玩](https://jyutoo.github.io/neons-adventure/)** · [首页截图](docs/images/home-preview.png) · [更新记录](CHANGELOG.md)
+在线试玩: https://github.com/Jyutoo/neons-adventure
 
 ## 开始游戏
 
@@ -57,7 +57,7 @@ node --test tests/*.test.js
 node --check src/js/game.js
 ```
 
-修改逻辑先写失败测试，每次更新记录到 [CHANGELOG.md](CHANGELOG.md)。文件职责、视觉约定与关键约束见 [AGENTS.md](AGENTS.md)。
+修改逻辑先写失败测试，每次更新记录到 `CHANGELOG.md`。文件职责、视觉约定与关键约束见 [AGENTS.md](AGENTS.md)。
 
 ## 素材与限制
 
