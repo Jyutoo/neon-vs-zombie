@@ -40,7 +40,7 @@ const V2 = ProgressStore.SAVE_KEY;
 const TOWER_FILES = ['progress.js', 'game.js'];                                   // game.html
 const ACTION_FILES = ['progress.js', 'action-data.js', 'action-logic.js', 'action.js']; // action.html
 const SHOP_FILES = ['progress.js', 'upgrade.js'];                                 // upgrade.html
-const LEVELS_FILES = ['progress.js', 'action-levels.js'];                         // action-levels.html
+const LEVELS_FILES = ['progress.js', 'action-data.js', 'action-logic.js', 'action-levels.js']; // action-levels.html
 
 // ── Drivers (they only read/seed production output) ────────────────────────
 
