@@ -612,7 +612,7 @@
     };
     state.boss = boss;
     state.enemies.push(boss);
-    announceWave('僵尸王登场');
+    announceWave('奶康登场');
     state.shake = Math.max(state.shake, 0.6);
     sound('boss');
     playNaikangEntranceAudio();
@@ -679,7 +679,7 @@
     if (!boss.phase2 && boss.hp <= boss.maxHp * DATA.boss.phase2At) {
       boss.phase2 = true;
       stage.classList.add('boss-phase2');
-      announceWave('僵尸王暴怒');
+      announceWave('奶康暴怒');
       state.shake = Math.max(state.shake, 0.5);
     }
     if (boss.hurt > 0) {
@@ -875,7 +875,7 @@
       <div class="result-card">
         <span class="eyebrow">闯关成功</span>
         <h2>第 ${state.levelParam} 关通过！</h2>
-        <p>用时 ${minutes} 分 ${seconds} 秒，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
+        <p>用时 ${minutes} 分 ${seconds} 秒，击杀 ${state.kills} 只敌人，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
         <div class="result-actions">
           <button id="retryButton" class="primary-button">再玩一次</button>
           <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
@@ -955,7 +955,7 @@
     <div class="result-card">
       <span class="eyebrow">本局结束</span>
       <h2>奶娃倒下了</h2>
-      <p>到达第 ${Math.min(state.screenIndex + 1, state.levelFlow.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
+      <p>到达第 ${Math.min(state.screenIndex + 1, state.levelFlow.screens.length)} 屏，击杀 ${state.kills} 只敌人，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
       <div class="result-actions">
         <button id="retryButton" class="primary-button">重新挑战</button>
         <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
@@ -983,13 +983,6 @@
     setTimeout(() => el.remove(), life);
   }
 
-  function armorMarkup(type) {
-    if (type === 'boss') return '<div class="armor boss-armor"></div><div class="boss-crown"></div>';
-    if (type === 'cone') return '<div class="armor cone-armor"></div>';
-    if (type === 'bucket' || type === 'elite') return '<div class="armor bucket-armor"></div>';
-    return '';
-  }
-
   function syncEnemyElements() {
     for (const enemy of state.enemies) {
       if (!enemy.el) {
@@ -997,7 +990,7 @@
         el.className = `enemy ${enemy.type}`;
         el.style.width = `${72 * enemy.cfg.scale}px`;
         el.style.height = `${124 * enemy.cfg.scale}px`;
-        el.innerHTML = `<img src="assets/zombie.png" alt="${enemy.cfg.name}">${armorMarkup(enemy.type)}<div class="enemy-hp"><div></div></div>`;
+        el.innerHTML = `<img src="${enemy.cfg.image}" alt="${enemy.cfg.name}"><div class="enemy-hp"><div></div></div>`;
         enemy.el = el;
         enemyLayer.appendChild(el);
       }
@@ -1040,7 +1033,7 @@
     const boundary = (index + 1) * DATA.level.screenWidth;
     if (screen.boss) {
       state.levelPhase = 'boss';
-      stageLabel.textContent = '僵尸王';
+      stageLabel.textContent = '奶康';
       state.spawnQueue = [{ boss: true, at: state.time + DATA.level.batchDelay }];
       return;
     }
@@ -1109,7 +1102,7 @@
       <div class="result-card">
         <span class="eyebrow">无尽模式</span>
         <h2>${newRecord ? '新纪录！' : '挑战结束'}</h2>
-        <p>坚持到第 ${state.wave} 波，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
+        <p>坚持到第 ${state.wave} 波，击杀 ${state.kills} 只敌人，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
         <div class="result-actions">
           <button id="retryButton" class="primary-button">再来一局</button>
           <a class="primary-button ghost" href="index.html">返回主菜单</a>
@@ -1150,8 +1143,8 @@
       state.screenCleared = true;
       state.levelPhase = 'advance';
       if (state.screenIndex === screens.length - 2) {
-        stageLabel.textContent = '前往僵尸王';
-        announceWave('前方就是僵尸王');
+        stageLabel.textContent = '前往奶康';
+        announceWave('前方就是奶康');
       } else {
         stageLabel.textContent = '本段清空，继续前进';
         announceWave('本段清空，继续前进');
@@ -1292,9 +1285,9 @@
     openOverlay(`
       <div class="result-card help-card">
         <span class="eyebrow">玩法说明</span>
-        <h2>奶龙战僵尸</h2>
+        <h2>奶家人的奇妙冒险</h2>
         <p>A/D 或方向键移动，空格跳跃（获得二段跳后可再跳一次），J 普攻三连，空中 J 跳劈，K 重击，L 音波，Shift 冲刺，Esc / P 暂停。</p>
-        <p>击杀敌人获得经验，升级时三选一强化。闯关模式三段清怪后挑战僵尸王；无尽模式波次无限增强，每 5 波精英、每 10 波僵尸王。</p>
+        <p>击杀敌人获得经验，升级时三选一强化。闯关模式三段清怪后挑战奶康；无尽模式波次无限增强，每 5 波精英、每 10 波奶康。</p>
         <div class="result-actions"><button id="helpClose" class="primary-button">知道了</button></div>
       </div>`);
     document.getElementById('helpClose').addEventListener('click', () => {

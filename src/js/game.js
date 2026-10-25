@@ -8,29 +8,29 @@ const COLS = 9;
 
 const TYPES = {
   egg: { name: '奶蛋', role: '奶黄生产', cost: 60, hp: 160, cooldown: 5, rate: 12, produce: 20, description: '每隔 12 秒生成 20 奶黄，需要更谨慎地规划阵容。' },
-  rat: { name: '奶鼠', role: '远程投石', cost: 120, hp: 190, cooldown: 5, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的僵尸丢石头，稳定单体输出。' },
+  rat: { name: '奶鼠', role: '远程投石', cost: 120, hp: 190, cooldown: 5, rate: 1.15, damage: 30, range: Infinity, projectile: 'rock', description: '向本行最近的敌人丢石头，稳定单体输出。' },
   snake: { name: '奶蛇', role: '毒液持续伤害', cost: 90, hp: 160, cooldown: 7, rate: 1.7, damage: 16, range: Infinity, projectile: 'glob', description: '喷出毒液，命中后造成 4 秒持续毒伤。' },
-  dragon: { name: '奶龙', role: '范围火焰', cost: 210, hp: 280, cooldown: 11, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近僵尸造成范围伤害。' },
+  dragon: { name: '奶龙', role: '范围火焰', cost: 210, hp: 280, cooldown: 11, rate: 1.9, damage: 48, range: 330, projectile: 'fire', description: '喷出奶香火焰，对目标及附近敌人造成范围伤害。' },
   rabbit: { name: '奶兔', role: '群体治疗', cost: 90, hp: 170, cooldown: 9, rate: 3, description: '每 3 秒治疗自身及周围八格的奶家人 24 点耐久。' },
-  tiger: { name: '奶虎', role: '近战爆发', cost: 180, hp: 330, cooldown: 9, rate: .85, damage: 75, range: 100, description: '近距离猛击僵尸，出手快、单次伤害高。' },
-  ox: { name: '奶牛', role: '高耐久防线', cost: 90, hp: 900, cooldown: 11, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住僵尸并近身顶撞。' },
+  tiger: { name: '奶虎', role: '近战爆发', cost: 180, hp: 330, cooldown: 9, rate: .85, damage: 75, range: 100, description: '近距离猛击敌人，出手快、单次伤害高。' },
+  ox: { name: '奶牛', role: '高耐久防线', cost: 90, hp: 900, cooldown: 11, rate: 2.2, damage: 20, range: 90, description: '拥有 900 点耐久，能长时间挡住敌人并近身顶撞。' },
   monkey: { name: '奶猴', role: '双目标攻击', cost: 150, hp: 200, cooldown: 8, rate: 1.4, damage: 24, range: Infinity, projectile: 'seed', description: '灵活投掷果核，每次同时攻击本行两个目标。' },
-  goat: { name: '奶羊', role: '击退控制', cost: 150, hp: 250, cooldown: 9, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退僵尸，击退后僵尸会获得短暂抗性。' },
-  horse: { name: '奶马', role: '冲锋突击', cost: 180, hp: 250, cooldown: 10, rate: 3.4, damage: 65, range: 310, description: '向远处僵尸发起冲锋，造成高伤害并将其撞退，击退后有抗性窗口。' },
+  goat: { name: '奶羊', role: '击退控制', cost: 150, hp: 250, cooldown: 9, rate: 2.2, damage: 38, range: 135, description: '用头槌造成伤害并击退敌人，击退后敌人会获得短暂抗性。' },
+  horse: { name: '奶马', role: '冲锋突击', cost: 180, hp: 250, cooldown: 10, rate: 3.4, damage: 65, range: 310, description: '向远处敌人发起冲锋，造成高伤害并将其撞退，击退后有抗性窗口。' },
   rooster: { name: '奶鸡', role: '攻速增益', cost: 120, hp: 180, cooldown: 10, rate: 0, description: '晨鸣助威，使本行其他奶家人的攻击速度提高 25%。' },
   pig: { name: '奶猪', role: '奶黄寻宝', cost: 150, hp: 280, cooldown: 9, rate: 13, produce: 25, description: '每 13 秒拱出 25 奶黄，耐久比奶蛋更高。' },
-  dog: { name: '奶狗', role: '减速守卫', cost: 120, hp: 260, cooldown: 8, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行僵尸减速；僵尸靠近时会直接撕咬。' }
+  dog: { name: '奶狗', role: '减速守卫', cost: 120, hp: 260, cooldown: 8, rate: 4.5, damage: 30, range: 120, description: '吠叫使本行敌人减速；敌人靠近时会直接撕咬。' }
 };
 
 const ZOMBIES = {
-  basic: { name: '普通僵尸', hp: 190, speed: 11, bite: 24 },
-  cone: { name: '路障僵尸', hp: 325, speed: 11, bite: 27 },
-  bucket: { name: '铁桶僵尸', hp: 525, speed: 9, bite: 31 },
-  runner: { name: '快速僵尸', hp: 155, speed: 16, bite: 22 },
-  brute: { name: '大块头僵尸', hp: 1100, speed: 5.5, bite: 60 },
-  spitter: { name: '远程僵尸', hp: 260, speed: 8, bite: 24, range: 340, rate: 2.8, damage: 35 },
-  jumper: { name: '跳跃僵尸', hp: 190, speed: 20, bite: 26 },
-  boss: { name: '僵尸王', hp: 4200, speed: 3.8, bite: 70 }
+  basic: { name: '奶豆', image: 'assets/enemies/naidou.png', hp: 190, speed: 11, bite: 24 },
+  cone: { name: '肥嘟嘟', image: 'assets/enemies/feidudu.png', hp: 325, speed: 11, bite: 27 },
+  bucket: { name: '牛来', image: 'assets/enemies/niulai.png', hp: 525, speed: 9, bite: 31 },
+  runner: { name: '豆脚', image: 'assets/enemies/doujiao.png', hp: 155, speed: 16, bite: 22 },
+  brute: { name: '唐包', image: 'assets/enemies/tangbao.png', hp: 1100, speed: 5.5, bite: 60 },
+  spitter: { name: '噜噜', image: 'assets/enemies/lulu.png', hp: 260, speed: 8, bite: 24, range: 340, rate: 2.8, damage: 35 },
+  jumper: { name: '咕咕嘎嘎', image: 'assets/enemies/gugugaga.png', hp: 190, speed: 20, bite: 26 },
+  boss: { name: '奶康', image: 'assets/enemies/naikang.png', hp: 4200, speed: 3.8, bite: 70 }
 };
 
 const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
@@ -743,12 +743,12 @@ function renderLevelPreview() {
   $('levelPreview').innerHTML = `
     <div class="preview-main">
       <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '无尽守护'}</span>
-      <h3>第 ${level} 关<small>${levelWaveCount(level)} 波僵尸</small></h3>
+      <h3>第 ${level} 关<small>${levelWaveCount(level)} 波敌人</small></h3>
       <div class="preview-tags">
         <span>${levelWaveCount(level)} 波</span>
         <span>${difficultyLabel(level)}</span>
-        <span>僵尸血量 ×${scaling.hp.toFixed(2)}</span>
-        ${boss ? '<span class="boss-tag">僵尸王出没</span>' : ''}
+        <span>敌人血量 ×${scaling.hp.toFixed(2)}</span>
+        ${boss ? '<span class="boss-tag">奶康出没</span>' : ''}
       </div>
       <div class="preview-enemies">${enemies}</div>
     </div>
@@ -844,7 +844,7 @@ function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = fa
   game.spawned++;
   if (summoned) game.total++;
   if (type === 'boss') {
-    announce('僵尸王来了！');
+    announce('奶康来了！');
     sound('wave');
     playNaikangEntranceAudio();
   }
@@ -1086,7 +1086,7 @@ function damagePlant(plant, amount) {
 function updateBossSkill(zombie) {
   if (!zombie.enraged && zombie.hp <= zombie.maxHp * .4) {
     zombie.enraged = true;
-    announce('僵尸王暴怒！');
+    announce('奶康暴怒！');
     spawnEffect('暴怒！', zombie.x, zombie.y - 80, 'combat-text damage');
   }
   if (game.time < zombie.nextSkill) return;
@@ -1352,7 +1352,7 @@ function triggerBaby(row, automatic) {
 
   const targets = game.zombies.filter(zombie => !zombie.dying && zombieOccupiesRow(zombie, row));
   if (!targets.length) {
-    if (!automatic) toast('这一行暂时没有僵尸，奶娃先保留体力');
+    if (!automatic) toast('这一行暂时没有敌人，奶娃先保留体力');
     return;
   }
 
@@ -1424,7 +1424,7 @@ function triggerBaby(row, automatic) {
     const names = [...new Set(survivors.map(zombie => ZOMBIES[zombie.type].name))].join('、');
     $('statusText').textContent = `${prefix}，${names}被笑声震伤但仍在前进`;
   } else {
-    $('statusText').textContent = `${prefix}，僵尸全被笑倒了`;
+    $('statusText').textContent = `${prefix}，敌人全被笑倒了`;
   }
   render();
 }
@@ -1459,9 +1459,9 @@ function showResult(result) {
   if (!result) { showHome(); return; }
   const { won, level, reward, firstClear } = result;
   const isFinal = won && level === MAX_LEVEL;
-  const title = isFinal ? '全部关卡通关！' : won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
+  const title = isFinal ? '全部关卡通关！' : won ? `第 ${level} 关守住啦！` : '敌人闯进奶家了';
   const copy = isFinal
-    ? `你守住了全部 ${MAX_LEVEL} 关，包括僵尸王镇守的最终决战。随时可以重复挑战任意关卡刷奶黄。`
+    ? `你守住了全部 ${MAX_LEVEL} 关，包括奶康镇守的最终决战。随时可以重复挑战任意关卡刷奶黄。`
     : won
       ? firstClear
         ? `首次通关第 ${level} 关，获得额外奶黄奖励，第 ${level + 1} 关正式解锁。`
@@ -1489,7 +1489,7 @@ function showResult(result) {
     <h2>${title}</h2>
     <p>${copy}</p>
     <div class="result-stats">
-      <div><strong>${result.kills}</strong><span>击退僵尸</span></div>
+      <div><strong>${result.kills}</strong><span>击退敌人</span></div>
       <div><strong>${result.collected}</strong><span>收集奶黄</span></div>
       <div><strong>${result.placed}</strong><span>放置角色</span></div>
     </div>
@@ -1553,7 +1553,7 @@ function render() {
   syncCollection('zombies', game.zombies, zombie => {
     const element = document.createElement('div');
     element.className = `entity zombie ${zombie.type}`;
-    element.innerHTML = `<div class="armor"></div><img src="assets/zombie.png" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
+    element.innerHTML = `<img src="${ZOMBIES[zombie.type].image}" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
     setEntityPosition(element, zombie);
     return element;
   }, (element, zombie) => {
@@ -1667,7 +1667,7 @@ function hideModal() { $('modal').classList.remove('visible'); }
 
 function showPauseModal() {
   showModal(`
-    <span class="modal-kicker">休息一下</span><h2>游戏已暂停</h2><p>奶家人和僵尸都在原地等你。</p>
+    <span class="modal-kicker">休息一下</span><h2>游戏已暂停</h2><p>奶家人和敌人都在原地等你。</p>
     <div class="result-actions"><button class="primary-button" id="resumeButton">继续游戏<svg><use href="#i-play"></use></svg></button><button class="secondary-button" id="pauseRestart">重新开局</button><button class="ghost-button" id="pauseHome">返回主页</button></div>
     <small>按空格也可以继续</small>`, 'compact');
   $('resumeButton').addEventListener('click', resumeGame);
@@ -1727,11 +1727,11 @@ function showHelp() {
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
-      <div><strong>关卡与奶黄</strong><br>每关有多波僵尸（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
+      <div><strong>关卡与奶黄</strong><br>每关有多波敌人（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
       <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人通过通关对应关卡自动解锁（通关第 2 关解锁奶鼠，第 3 关解锁奶兔，依此类推）。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
-      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。升级后可多次使用，冷却后恢复。</div>
-      <div><strong>僵尸王</strong><br>第 12 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
+      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通敌人并重创大块头与奶康；敌人突破时也会自动触发。升级后可多次使用，冷却后恢复。</div>
+      <div><strong>奶康</strong><br>第 12 关的最后一波会出现奶康。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
     <button class="primary-button" id="helpClose">知道了</button>`, 'compact');
@@ -1917,6 +1917,9 @@ window.__nailongTower = {
   get progress() { return progress; },
   set progress(value) { progress = value; },
   game,
+  ZOMBIES,
+  spawnZombie,
+  render,
   resetGame,
   startLevel,
   finishGame,

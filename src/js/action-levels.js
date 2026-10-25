@@ -72,7 +72,7 @@ function renderLevelPreview() {
     <div class="preview-main">
       <span class="preview-kicker">LEVEL ${String(selectedLevel).padStart(2, '0')} · ${isBoss ? 'BOSS 关' : '闯关'}</span>
       <h3>第 ${selectedLevel} 关</h3>
-      <p class="preview-desc">${isCleared ? '已通关' : isBoss ? '最终决战：僵尸王' : '三段关卡 · 击败所有僵尸'}</p>
+      <p class="preview-desc">${isCleared ? '已通关' : isBoss ? '最终决战：奶康' : '三段关卡 · 击败所有邪恶家人'}</p>
     </div>
     <div class="preview-action">
       <button id="startButton" class="primary-button">${isCleared ? '再次闯关' : '开始闯关'}</button>
