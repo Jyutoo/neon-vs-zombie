@@ -73,8 +73,9 @@ else root.ActionLogic = createLogic(root.ACTION_DATA);
 - **两个"奶黄"是不同的东西**：
   - `progress.custard` —— 全局持久货币，主菜单/强化页/关卡选择页显示的都是它。
   - `game.custard` —— 模式A 单局内的可用资源。
-- 生命周期：进关用 `Math.max(150, progress.custard)` 开局（保底 150 防止破产软锁），结算 `progress.custard = game.custard + reward` 写回，中途退出在 `leaveToHome()` 写回。
-- `leaveToHome()` 有 `game.state === 'running'` 守卫，防止结算弹窗里再点"返回主页"导致重复计入。**改动这几处时务必保住该守卫**，否则会双倍发钱。
+- 生命周期：进关刷新最新存档，用 `Math.max(150, progress.custard)` 开局（保底 150 防止破产软锁），记录 `game.startCustard`。退出和结算通过 `ProgressStore.update()` 把本局增减量 `game.custard - game.startCustard` 加到最新钱包，结算再加奖励，余额最低为 0；避免撤销另一标签页的强化消费。退出不重新初始化一局，不触发开局保底。
+- `leaveToHome()` 仅在 `running` 或 `paused` 状态保存未结算局；`won` / `lost` / `ready` 返回不再入账。**务必保留这个状态守卫**，防止重复结算。
+- 塔防 `saveProgress(mutator)` 只修改本次操作负责的字段，开局/选关前重新读取进度；仅明确的「重置进度」操作允许整份覆盖。首通奖励按结算时的最新通关记录判断。
 - 关卡上限是 `ProgressStore.MAX_LEVEL`（12）。模式A 到 12 就封顶：`startLevel()` 拒绝越界，最终关结算不给"下一关"按钮。模式B 每关的战斗配置由 `Logic.levelConfig(level)` 现算，不要在 `action-data.js` 里写死单关。
 - 解锁：`isCharacterUnlocked()` 采用"**拥有即解锁**"——存档里已登记的角色永远可用（保护 v1 迁移来的角色），否则按 `CHARACTER_UNLOCK_LEVELS` 通关等级。模式B 关卡按 `ProgressStore.actionLevelsUnlocked(endlessWave)` = `Math.floor(endlessWave / 3) + 1`（上限 12）解锁。
 - 持久强化：`progress.upgrades[key]` 等级 0–7（`MAX_UPGRADE_LEVEL`），费用 `[100,200,400,800,1600,3200,6400]`，在模式A `applyModeAUpgrades()` 与模式B `applyModeBUpgrades()` 注入本局数值。

@@ -59,8 +59,8 @@ function levelWaveConfig(level) {
   return { starts, intervals };
 }
 
-function saveProgress() {
-  ProgressStore.save(progress);
+function saveProgress(mutator) {
+  progress = ProgressStore.update(mutator);
 }
 
 let progress = ProgressStore.load();
@@ -80,7 +80,9 @@ function checkCharacterUnlocks() {
     }
   }
   if (newUnlocks.length > 0) {
-    saveProgress();
+    saveProgress(saved => {
+      saved.unlocked = [...new Set([...saved.unlocked, ...progress.unlocked])];
+    });
     toast(`解锁新角色：${newUnlocks.join('、')}`);
   }
 }
@@ -568,6 +570,7 @@ function plantAt(row, col) {
 }
 
 function resetGame(autostart = false, level = progress.selectedLevel) {
+  progress = ProgressStore.load();
   nextId = 1;
   cancelCardDrag();
   dragClickUntil = 0;
@@ -576,15 +579,14 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
   const queue = buildQueue(waves);
   const startCustard = Math.max(150, progress.custard);
   if (startCustard > progress.custard) {
-    progress.custard = startCustard;
-    saveProgress();
+    saveProgress(saved => { saved.custard = Math.max(150, saved.custard); });
   }
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
     levelIndex: level,
     waves,
     scaling: levelScaling(level),
-    time: 0, custard: startCustard, speed: 1,
+    time: 0, custard: startCustard, startCustard, speed: 1,
     plants: [], zombies: [], projectiles: [], enemyProjectiles: [], custards: [], babies: [],
     selected: null, queue, spawned: 0, kills: 0,
     collected: 0, placed: 0, wave: -1, naturalTimer: 5,
@@ -619,6 +621,7 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
 }
 
 function startLevel(level) {
+  progress = ProgressStore.load();
   const target = Math.max(1, Math.floor(Number(level) || 1));
   if (target > MAX_LEVEL) {
     toast(`第 ${MAX_LEVEL} 关就是最终关，可以重复挑战`);
@@ -630,8 +633,7 @@ function startLevel(level) {
     sound('deny');
     return;
   }
-  progress.selectedLevel = target;
-  saveProgress();
+  saveProgress(saved => { saved.selectedLevel = target; });
   resetGame(true, target);
   initAudio();
   sound('start');
@@ -660,11 +662,14 @@ function hideHome() {
 }
 
 function leaveToHome() {
-  if (game.state === 'running') {
-    progress.custard = game.custard;
-    saveProgress();
+  if (game.state === 'running' || game.state === 'paused') {
+    saveProgress(saved => {
+      saved.custard = Math.max(0, saved.custard + game.custard - game.startCustard);
+    });
   }
-  resetGame(false);
+  progress = ProgressStore.load();
+  stopBabyPerformances();
+  showHome();
   sound('select');
   setTimeout(() => {
     window.location.href = 'index.html';
@@ -784,14 +789,14 @@ function renderRoster() {
 }
 
 function selectLevel(level) {
+  progress = ProgressStore.load();
   if (level > progress.highestCleared + 1) {
     toast(`通关第 ${progress.highestCleared + 1} 关后解锁`);
     sound('deny');
     return;
   }
   if (progress.selectedLevel !== level) {
-    progress.selectedLevel = level;
-    saveProgress();
+    saveProgress(saved => { saved.selectedLevel = level; });
     sound('select');
   }
   renderHome();
@@ -816,7 +821,7 @@ function showResetConfirm() {
   $('resetConfirm').addEventListener('click', () => {
     progress = ProgressStore.defaultProgress();
     homeTrackStart = 1;
-    saveProgress();
+    ProgressStore.save(progress);
     hideModal();
     resetGame(false);
     toast('进度已重置，重新开始吧');
@@ -1438,15 +1443,19 @@ function finishGame(won) {
   updatePauseButton();
   sound(won ? 'win' : 'lose');
   const level = game.levelIndex;
-  const firstClear = won && level === progress.highestCleared + 1;
-  const reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
-  progress.custard = game.custard + reward;
-  if (won && firstClear) {
-    progress.highestCleared = level;
-    progress.selectedLevel = Math.min(MAX_LEVEL, level + 1);
-    checkCharacterUnlocks();
-  }
-  saveProgress();
+  let firstClear = false;
+  let reward = 0;
+  saveProgress(saved => {
+    firstClear = won && level === saved.highestCleared + 1;
+    reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
+    // Apply this run's delta to the latest wallet, preserving other tabs' purchases.
+    saved.custard = Math.max(0, saved.custard + game.custard - game.startCustard + reward);
+    if (firstClear) {
+      saved.highestCleared = level;
+      saved.selectedLevel = Math.min(MAX_LEVEL, level + 1);
+    }
+  });
+  if (firstClear) checkCharacterUnlocks();
   renderHome();
   lastResult = {
     won, level, reward, firstClear, custard: progress.custard,
