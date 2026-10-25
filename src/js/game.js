@@ -742,7 +742,7 @@ function renderLevelPreview() {
     .join('');
   $('levelPreview').innerHTML = `
     <div class="preview-main">
-      <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '无尽守护'}</span>
+      <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '庭院守护'}</span>
       <h3>第 ${level} 关<small>${levelWaveCount(level)} 波敌人</small></h3>
       <div class="preview-tags">
         <span>${levelWaveCount(level)} 波</span>
@@ -806,7 +806,7 @@ function shiftTrack(delta) {
 function showResetConfirm() {
   showModal(`
     <span class="modal-kicker">重置进度</span>
-    <h2>重新开始无尽守护？</h2>
+    <h2>重新开始庭院守护？</h2>
     <p>奶黄、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
     <div class="result-actions">
       <button class="secondary-button" id="resetCancel">取消</button>
