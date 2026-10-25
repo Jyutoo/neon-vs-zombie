@@ -53,7 +53,7 @@ button { font: inherit; }
 @keyframes hurtFlash { 0%, 100% { filter: none; } 50% { filter: brightness(1.8) sepia(1) saturate(4) hue-rotate(-30deg); } }
 
 .enemy { position: absolute; transform-origin: 50% 100%; z-index: 2; }
-.enemy img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 7px rgba(45, 70, 40, .22)); }
+.enemy img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 7px rgba(120, 40, 30, .28)); }
 .enemy.windup img { animation: enemyWindup .25s linear infinite alternate; }
 .enemy.dying { pointer-events: none; }
 .enemy-hp { position: absolute; left: 50%; top: -12px; width: 70%; height: 6px; transform: translateX(-50%); border-radius: 999px; background: rgba(40, 60, 35, .35); overflow: hidden; }

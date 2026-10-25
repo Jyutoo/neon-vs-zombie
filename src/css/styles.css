@@ -157,7 +157,9 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 #custardLayer { z-index: 9; }
 #effectLayer { z-index: 10; overflow: hidden; }
 .entity { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
-.entity > img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 5px 3px rgba(45,65,30,.25)); }
+.entity > img { width: 100%; height: 100%; object-fit: contain; }
+.plant > img { filter: drop-shadow(0 5px 3px rgba(45,65,30,.25)); }
+.zombie > img { filter: drop-shadow(0 5px 3px rgba(120,40,30,.30)); }
 .plant { width: 8.4%; height: 18.4%; }
 .plant img { transform-origin: 50% 90%; animation: plantIdle 2.8s ease-in-out infinite; }
 .plant.attacking img { animation: plantAttack .25s ease; }
