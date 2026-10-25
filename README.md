@@ -4,7 +4,7 @@
 
 从庭院出发，收集奶黄、布置防线，或操控奶娃亲自迎战奶康。使用原生 HTML、CSS、JavaScript，无需安装依赖或构建。
 
-在线试玩: https://github.com/Jyutoo/neons-adventure
+在线试玩: https://jyutoo.github.io/neons-adventure
 
 ## 开始游戏
 
