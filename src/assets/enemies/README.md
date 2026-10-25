@@ -3,14 +3,14 @@
 邪恶家人阵营 8 名角色的透明底立绘。**文件名与高度是契约**，模式A `ZOMBIES[type].image`
 与模式B 的敌人配置都按这张表引用，改任何一项都要同步改代码。
 
-| 文件 | 角色 | 对应旧僵尸类型 | 导出高度 |
+| 文件 | 角色 | 对应内部类型 | 导出高度 |
 | --- | --- | --- | --- |
 | `naidou.png` | 奶豆 | `basic` | 248 |
 | `feidudu.png` | 肥嘟嘟 | `cone` | 248 |
-| `niulai.png` | 牛奶 | `bucket` | 248 |
+| `niulai.png` | 牛来 | `bucket` | 248 |
 | `doujiao.png` | 豆脚 | `runner` | 240 |
 | `tangbao.png` | 唐包 | `brute` | 330 |
-| `lulu.png` | 露露 | `spitter` | 240 |
+| `lulu.png` | 噜噜 | `spitter` | 240 |
 | `gugugaga.png` | 咕咕嘎嘎 | `jumper` | 324 |
 | `naikang.png` | 奶康 | `boss` | 448 |
 

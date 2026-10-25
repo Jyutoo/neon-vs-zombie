@@ -1,4 +1,4 @@
-# AGENTS.md — 奶龙大战僵尸
+# AGENTS.md — 奶家人的奇妙冒险
 
 本文件为在此仓库上工作的 AI 编码代理（与人类协作者）提供项目约定。修改代码前先读这里。
 
@@ -13,7 +13,7 @@
 | 称呼 | 含义 | 入口 |
 | --- | --- | --- |
 | **模式A** | 塔防（五行九列庭院，放置奶家人） | `src/game.html` |
-| **模式B** | 横版格斗（操控奶娃清怪与打僵尸王） | `src/action.html` |
+| **模式B** | 横版格斗（操控奶娃清怪与打奶康） | `src/action.html` |
 
 用户说"模式A/模式B"时按此对应，不要混淆两套代码。
 
@@ -29,6 +29,9 @@ src/js/action-logic.js                                  模式B 纯逻辑层（�
 src/action-levels.*                                     模式B 关卡选择页
 src/upgrade.*                                           奶娃强化系统（主菜单进入，消耗全局奶黄）
 src/assets/                                             角色图与 baby-laugh.mp4；source-* 是抠图源文件
+src/assets/enemies/                                     8 名敌方角色立绘；文件名是稳定契约，同名同规格覆盖即可
+src/assets/source-enemies/                              需求包原始三视图，抠图用，代码零引用，不许删
+tools/prep-enemy-art.py                                 开发期素材加工（Pillow/numpy/scipy），不进运行时
 tests/helpers/browser-env.js                            把 src/js 下生产脚本载入 Node VM 的最小 DOM 桩
 tests/*.test.js                                         Node 内置测试运行器的用例
 启动游戏.bat                                             双击打开 src/index.html
@@ -39,7 +42,7 @@ tests/*.test.js                                         Node 内置测试运行�
 ## 常用命令
 
 ```bash
-node --test tests/*.test.js          # 全部单元测试（当前 132 项）
+node --test tests/*.test.js          # 全部单元测试（当前 141 项）
 node --check src/js/action.js        # 语法检查，改完每个 JS 文件都跑一遍
 "C:/Users/Lenovo/miniconda3/python.exe" -m http.server 4173 --bind 127.0.0.1
 ```
@@ -92,7 +95,8 @@ else root.ActionLogic = createLogic(root.ACTION_DATA);
 - `DATA.player.fire.halfAngleDeg` 是**未被使用的配置**：`.fire-breath` 实际画成固定 92px 高的横条，命中框按矩形实现以对齐视觉。不要以为它是活的锥角参数。
 - 模式B 主角是**奶娃**（不是奶龙）；喷火技能已改为"音波"。文案与素材别写回奶龙。
 - `assets/source-*` 是抠图用的原始素材，代码零引用但有意保留，**不要当垃圾删**。
-- 模式B 的震荡波依赖 `state.player.onGround`，僵尸普攻与 Boss 冲撞依赖纵向重叠——"跳起来就闪避"是刻意设计，别改回只比水平距离。
+- 模式B 的震荡波依赖 `state.player.onGround`，敌人普攻与 Boss 冲撞依赖纵向重叠——"跳起来就闪避"是刻意设计，别改回只比水平距离。
+- **敌人形象靠 `ZOMBIES[type].image` / `DATA.enemies[type].image` 读取**，假护甲 CSS 已删除。加新敌人类型必须同时给 `image`，否则渲染出 `src="undefined"`。`tests/enemy-art.test.js` 会守住这一点。
 - **最后一段 Boss 屏不在 `DATA.level.screens` 里**：`action-data.js` 只配第 1 关的基础战斗段，`Logic.levelConfig()` 负责成长并**追加** `{ boss: true }`。要拿 Boss 段下标就读 `state.levelFlow.screens.length - 1`，写 `DATA.level.screens.length - 1` 会指到一个战斗段、绕过 Boss 的胜利判定。
 - `updateLevelFlow()` 的"清场即推进"只在 `levelPhase === 'combat'` 生效。Boss 常常是最后一名敌人，若允许在 `boss` 阶段推进，阶段会被切成 `advance`、胜利检查再也进不去（Issue #2 的 P1 回归）。
 
