@@ -42,7 +42,7 @@ tests/*.test.js                                         Node 内置测试运行�
 ## 常用命令
 
 ```bash
-node --test tests/*.test.js          # 全部单元测试（当前 141 项）
+node --test tests/*.test.js          # 全部单元测试（当前 144 项）
 node --check src/js/action.js        # 语法检查，改完每个 JS 文件都跑一遍
 "C:/Users/Lenovo/miniconda3/python.exe" -m http.server 4173 --bind 127.0.0.1
 ```

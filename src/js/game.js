@@ -846,6 +846,7 @@ function spawnZombie(type, row = Math.floor(Math.random() * ROWS), summoned = fa
   if (type === 'boss') {
     announce('奶康来了！');
     sound('wave');
+    playNaikangEntranceAudio();
   }
 }
 
@@ -1754,6 +1755,18 @@ function initAudio() {
   if (audioContext.state === 'suspended') audioContext.resume();
 }
 
+let naikangEntranceAudio;
+function playNaikangEntranceAudio() {
+  if (!game.sound) return;
+  if (!naikangEntranceAudio) {
+    naikangEntranceAudio = new Audio('assets/naikang-entrance.mp3');
+    naikangEntranceAudio.preload = 'auto';
+  }
+  naikangEntranceAudio.muted = false;
+  naikangEntranceAudio.currentTime = 0;
+  naikangEntranceAudio.play().catch(() => {});
+}
+
 function tone(frequency, duration, type = 'sine', volume = .025, delay = 0) {
   if (!game.sound || !audioContext) return;
   const start = audioContext.currentTime + delay;
@@ -1867,6 +1880,7 @@ $('soundButton').addEventListener('click', () => {
   game.sound = !game.sound;
   if (game.sound) initAudio();
   activeBabyVideos.forEach(video => { video.muted = !game.sound; });
+  if (naikangEntranceAudio) naikangEntranceAudio.muted = !game.sound;
   $('soundButton').innerHTML = `<svg><use href="#i-${game.sound ? 'sound' : 'muted'}"></use></svg>`;
   $('soundButton').title = game.sound ? '关闭声音' : '打开声音';
 });
@@ -1910,6 +1924,7 @@ window.__nailongTower = {
   startLevel,
   finishGame,
   placeUnit,
+  spawnZombie,
   spawnCustard,
   collectCustard,
   checkCharacterUnlocks,

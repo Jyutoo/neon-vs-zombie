@@ -26,6 +26,17 @@
   const overlay = document.getElementById('overlay');
 
   let audioContext;
+  let naikangEntranceAudio;
+  function playNaikangEntranceAudio() {
+    if (!state.sound) return;
+    if (!naikangEntranceAudio) {
+      naikangEntranceAudio = new Audio('assets/naikang-entrance.mp3');
+      naikangEntranceAudio.preload = 'auto';
+    }
+    naikangEntranceAudio.muted = false;
+    naikangEntranceAudio.currentTime = 0;
+    naikangEntranceAudio.play().catch(() => {});
+  }
   function initAudio() {
     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === 'suspended') audioContext.resume();
@@ -604,6 +615,7 @@
     announceWave('奶康登场');
     state.shake = Math.max(state.shake, 0.6);
     sound('boss');
+    playNaikangEntranceAudio();
     return boss;
   }
 
@@ -1228,6 +1240,7 @@
   }
 
   function updateSoundButton() {
+    if (naikangEntranceAudio) naikangEntranceAudio.muted = !state.sound;
     document.getElementById('soundButton').textContent = state.sound ? '音效开' : '音效关';
   }
 
