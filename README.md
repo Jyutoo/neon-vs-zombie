@@ -164,7 +164,7 @@ nailong-vs-zombies/
 │   ├── js/progress.js                                  唯一存档层（读 / v1 迁移 / 归一化 / 写）
 │   ├── upgrade.html + .css + .js                       奶娃强化系统
 │   └── assets/                                         角色、僵尸、奶娃视频与原始素材
-├── tests/                                  Node 内置测试（10 个文件，132 项）
+├── tests/                                  Node 内置测试（11 个文件，135 项）
 │   ├── helpers/browser-env.js              把 src/js 生产脚本载入 Node VM 的 DOM 桩
 │   ├── action-logic.test.js                经验、波次、升级、碰撞几何
 │   ├── action-level-flow.test.js           逐段推进与关卡缩放
@@ -175,6 +175,7 @@ nailong-vs-zombies/
 │   ├── level-config.test.js                12 关配置
 │   ├── unlock-logic.test.js                解锁规则
 │   ├── upgrade-effects.test.js             强化效果注入
+│   ├── naikang-entrance-audio.test.js       奶康登场音频与静音
 │   └── integration.test.js                 跨模块集成
 ├── docs/superpowers/                       设计 spec 与实现计划
 ├── AGENTS.md                               AI 代理协作约定
@@ -186,7 +187,7 @@ nailong-vs-zombies/
 ## 开发与测试
 
 ```bash
-node --test tests/*.test.js          # 132 项单元测试（10 个文件）
+node --test tests/*.test.js          # 135 项单元测试（11 个文件）
 node --check src/js/game.js          # 逐个 JS 文件做语法检查（脚本都在 src/js/）
 ```
 
@@ -194,7 +195,7 @@ node --check src/js/game.js          # 逐个 JS 文件做语法检查（脚本�
 
 ## 素材说明
 
-奶家人形象由用户提供素材裁切抠图；奶娃静态图与捧腹大笑视频/原声取自用户素材，视频直接用微信原片（592×1280 手机录屏，H.264 / AAC），画面里的状态栏与"停止"按钮由 `game.js` 的 `BABY_VIDEO_CROP` 在播放时裁掉。僵尸为配套生成的原创卡通素材，未直接使用《植物大战僵尸》原游戏素材。`src/assets/source-*` 是裁切抠图用的原始素材副本，代码不引用但有意保留。
+奶家人形象由用户提供素材裁切抠图；奶娃静态图与捧腹大笑视频/原声取自用户素材，视频直接用微信原片（592×1280 手机录屏，H.264 / AAC），画面里的状态栏与"停止"按钮由 `game.js` 的 `BABY_VIDEO_CROP` 在播放时裁掉。奶康登场音频使用用户提供的 `naikang-entrance.mp3`。僵尸为配套生成的原创卡通素材，未直接使用《植物大战僵尸》原游戏素材。`src/assets/source-*` 是裁切抠图用的原始素材副本，代码不引用但有意保留。
 
 ## 已知限制
 
