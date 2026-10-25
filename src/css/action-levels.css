@@ -1,3 +1,6 @@
+.unlock-guidance { padding: 16px 20px; border-radius: 16px; background: #fffff3; color: #254d2c; font-size: 14px; line-height: 1.7; }
+.unlock-guidance p { margin: 0 0 5px; }
+.unlock-guidance a { color: #376b31; font-weight: 700; }
 /* action-levels.css — Mode B level select page (darker action theme) */
 
 :root {
@@ -218,7 +221,7 @@ header {
 .level-card.locked {
   background: var(--card-locked);
   opacity: .45;
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .level-card.locked::after {

@@ -15,6 +15,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 function createNode() {
   const classes = new Set();
+  const listeners = new Map();
   const self = {
     style: { setProperty() {} },
     dataset: {},
@@ -29,14 +30,21 @@ function createNode() {
     },
     appendChild(child) { self.children.push(child); return child; },
     remove() {},
-    addEventListener() {},
+    addEventListener(type, listener) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(listener);
+    },
     setAttribute() {},
     getAttribute() { return null; },
     querySelector() { return createNode(); },
     querySelectorAll() { return []; },
     scrollIntoView() {},
     focus() {},
-    click() {},
+    click() {
+      if (!self.disabled) {
+        for (const listener of listeners.get('click') || []) listener({ target: self });
+      }
+    },
     get childElementCount() { return self.children.length; },
     get firstElementChild() { return self.children[0] || null; },
     getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 550 }; }

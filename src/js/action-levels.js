@@ -24,7 +24,8 @@ function renderLevelTrack() {
   const end = Math.min(MAX_LEVEL, trackStart + PER_PAGE - 1);
 
   for (let i = trackStart; i <= end; i++) {
-    const card = document.createElement('div');
+    const card = document.createElement('button');
+    card.type = 'button';
     card.className = 'level-card';
 
     const isCleared = i <= actionCleared;
@@ -43,9 +44,14 @@ function renderLevelTrack() {
       ${i === MAX_LEVEL ? '<span class="boss-tag">BOSS</span>' : ''}
     `;
 
-    if (!isLocked) {
-      card.addEventListener('click', () => selectLevel(i));
-    }
+    card.setAttribute('aria-label', `第 ${i} 关${isLocked ? `，无尽最佳达到第 ${(i - 1) * 3} 波后解锁` : ''}`);
+    card.addEventListener('click', () => {
+      if (isLocked) {
+        document.getElementById('unlockHint').textContent = `第 ${i} 关需无尽最佳达到第 ${(i - 1) * 3} 波后解锁。`;
+      } else {
+        selectLevel(i);
+      }
+    });
 
     track.appendChild(card);
   }
@@ -59,6 +65,14 @@ function selectLevel(level) {
   selectedLevel = level;
   renderLevelTrack();
   renderLevelPreview();
+  renderUnlockHint();
+}
+
+function renderUnlockHint() {
+  const unlocked = unlockedLevel();
+  document.getElementById('unlockHint').textContent = unlocked >= MAX_LEVEL
+    ? '全部闯关关卡已解锁。'
+    : `无尽最佳达到第 ${unlocked * 3} 波，即可解锁第 ${unlocked + 1} 关。`;
 }
 
 function renderLevelPreview() {
