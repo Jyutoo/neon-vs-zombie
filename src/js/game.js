@@ -200,7 +200,9 @@ let toastTimer;
 let audioContext;
 const activeBabyVideos = new Set();
 const activeBabyRenderers = new Map();
-const BABY_VIDEO_CROP = { x: 24, y: 82, width: 252, height: 348 };
+// 裁切框是 baby-laugh.mp4 的原始像素坐标（592×1280 手机录屏），
+// 取这个矩形是为了同时躲开状态栏、录屏胶囊、底部"停止"按钮和左边缘 1px 黑边。
+const BABY_VIDEO_CROP = { x: 48, y: 304, width: 504, height: 696 };
 const BABY_CANVAS_WIDTH = 176;
 const BABY_CANVAS_HEIGHT = 243;
 let noiseBuffer;

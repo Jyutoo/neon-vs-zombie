@@ -88,6 +88,7 @@ else root.ActionLogic = createLogic(root.ACTION_DATA);
 
 - **目录名是中文**（`D:\奶龙大战僵尸`）。个别 Windows 工具链对中文路径有 bug，涉及编译/外部工具时先复制到 ASCII 临时目录。
 - **舞台固定 1280×720**：`action.css` 的 `.stage-wrap { place-items: center }` 配 `action.js` 的等比缩放，窗口窄于 1280 CSS px 时舞台会被推出可视区。用户正常浏览器宽度下不显现，改布局前先确认是不是这个既有行为。
+- **`BABY_VIDEO_CROP` 与 `assets/baby-laugh.mp4` 的实际分辨率绑死**：模式A 不直接放视频，`drawBabyFrame()` 按这个矩形把视频帧画到 176×243 canvas 再抠底。换视频文件必须按新分辨率重算矩形（微信原片是 592×1280 的整屏录屏，矩形必须躲开状态栏、录屏胶囊、底部「停止」按钮和左边缘 1px 黑边），否则奶娃跑偏或把 UI 画进来。改完用浏览器导出 canvas 帧确认构图。
 - `DATA.player.fire.halfAngleDeg` 是**未被使用的配置**：`.fire-breath` 实际画成固定 92px 高的横条，命中框按矩形实现以对齐视觉。不要以为它是活的锥角参数。
 - 模式B 主角是**奶娃**（不是奶龙）；喷火技能已改为"音波"。文案与素材别写回奶龙。
 - `assets/source-*` 是抠图用的原始素材，代码零引用但有意保留，**不要当垃圾删**。
