@@ -8,6 +8,8 @@
 
 当前版本：**全局奶黄经济 + 12 关塔防 + 12 关格斗 + 持久强化（v1.2）**
 
+**在线试玩：** <https://jyutoo.github.io/neons-adventure/>
+
 ## 启动游戏
 
 - Windows：双击 `启动游戏.bat`，直接打开主菜单。
