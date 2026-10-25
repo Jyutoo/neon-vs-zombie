@@ -9,6 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const DATA = require('../src/js/action-data.js');
 const Logic = require('../src/js/action-logic.js');
+const ProgressStore = require('../src/js/progress.js');
 const { boot, createStorage } = require('./helpers/browser-env');
 
 const FILES = ['progress.js', 'action-data.js', 'action-logic.js', 'action.js'];
@@ -17,7 +18,7 @@ function bootAction(level) {
   const env = boot({
     files: FILES,
     search: `?mode=level&level=${level}`,
-    save: createStorage()
+    save: createStorage({ [ProgressStore.SAVE_KEY]: JSON.stringify({ endlessBest: { wave: 33 } }) })
   });
   const api = env.global.window.__nailong;
   api.state.sound = false;

@@ -76,6 +76,10 @@
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode') === 'endless' ? 'endless' : 'level';
   const levelParam = Math.max(1, Math.min(DATA.level.maxLevel, parseInt(params.get('level')) || 1));
+  if (mode === 'level' && levelParam > ProgressStore.actionLevelsUnlocked(ProgressStore.load().endlessBest.wave)) {
+    window.location.href = 'action-levels.html';
+    return;
+  }
   const levelFlow = mode === 'level' ? Logic.levelConfig(levelParam) : null;
 
   function loadActionProgress() {

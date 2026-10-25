@@ -65,6 +65,7 @@ test('endless and level results persist a complete save', () => {
   assert.equal(afterEndless.highestCleared, 5);
 
   const levelSave = createStorage({ [V1]: JSON.stringify(OLD_SAVE) });
+  ProgressStore.update(saved => { saved.endlessBest.wave = 15; }, levelSave);
   const levelRun = bootAction(levelSave, '?mode=level&level=6');
   levelRun.api.state.levelParam = 6;
   levelRun.api.winLevel();
