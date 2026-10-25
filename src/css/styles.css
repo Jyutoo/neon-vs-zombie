@@ -113,14 +113,14 @@ a.icon-button { text-decoration: none; color: #52705a; }
 .progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #9dce62, #f0ca4c); box-shadow: inset 0 1px 1px #fff8; transition: width .35s ease; }
 .progress-track > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 8px; font-weight: 900; color: #49603e; font-variant-numeric: tabular-nums; }
 .zombie-legend { display: flex; align-items: center; gap: 5px; color: #74816c; font-size: 9px; white-space: nowrap; }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; margin-left: 5px; }
-.legend-dot.basic { background: #91a88a; }
-.legend-dot.cone { background: #e7983c; }
-.legend-dot.bucket { background: #8e9ca3; }
-.legend-dot.brute { background: #765442; }
-.legend-dot.spitter { background: #7ca943; }
-.legend-dot.jumper { background: #b65f88; }
-.legend-dot.boss { background: #a13f35; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; margin-left: 5px; box-shadow: inset 0 0 0 1px rgba(72, 92, 58, .3); }
+.legend-dot.basic { background: #f2e3b6; }
+.legend-dot.cone { background: #f0a83c; }
+.legend-dot.bucket { background: #c9a27a; }
+.legend-dot.brute { background: #e0b8a0; }
+.legend-dot.spitter { background: #ffd95e; }
+.legend-dot.jumper { background: #b98a5a; }
+.legend-dot.boss { background: #d94f3a; }
 .board-frame { padding: 8px; border-radius: 26px; background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(199,220,169,.85)); box-shadow: 0 18px 45px rgba(49,81,40,.18), inset 0 1px 0 #fff; border: 1px solid #fff; }
 .board { position: relative; width: 100%; aspect-ratio: 1080 / 550; overflow: hidden; border-radius: 19px; background: #9ac769; isolation: isolate; }
 .sky-glow { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 60% 0, rgba(255,255,194,.38), transparent 48%), linear-gradient(90deg, #bad88a, #90bf60); }
@@ -171,27 +171,15 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .zombie.hit > img { filter: brightness(1.7) sepia(1) hue-rotate(300deg) drop-shadow(0 0 4px #fff); }
 .zombie .health-track { left: 24%; right: 15%; bottom: -1px; }
 .zombie .health-fill { background: linear-gradient(90deg, #d86c4f, #f0bd56); }
-.armor { position: absolute; pointer-events: none; display: none; }
-.zombie.cone .armor, .zombie.bucket .armor, .zombie.runner .armor { display: block; }
-.zombie.cone .armor { width: 31%; height: 38%; left: 36%; top: -6%; background: linear-gradient(100deg, #ffbe55, #d87525); clip-path: polygon(50% 0, 100% 88%, 82% 100%, 10% 92%); transform: rotate(-9deg); filter: drop-shadow(1px 2px 1px #68432155); }
-.zombie.bucket .armor { width: 35%; height: 31%; left: 35%; top: 0; border-radius: 5px 5px 12px 12px; background: linear-gradient(100deg, #eef2ed, #899ba0 60%, #5f7177); border-top: 3px solid #586d73; transform: rotate(-7deg); box-shadow: inset 4px 0 3px #fff7; }
-.zombie.runner .armor { width: 35%; height: 8%; left: 35%; top: 18%; background: #d7624a; border-radius: 4px; transform: rotate(-7deg); }
 .zombie.runner > img { animation-duration: .34s; }
 .zombie.brute { width: 14%; height: 30%; }
-.zombie.brute > img { filter: saturate(.65) brightness(.82) drop-shadow(0 7px 4px rgba(45,35,30,.35)); }
-.zombie.brute .armor { display: block; width: 78%; height: 24%; left: 9%; top: 31%; border-radius: 45% 45% 25% 25%; background: linear-gradient(#8b6852,#503d34); border: 3px solid #b08b6b; }
-.zombie.spitter .armor { display: block; width: 68%; height: 7%; left: -8%; top: 48%; border-radius: 8px; background: linear-gradient(#b7e565,#527c32); border: 2px solid #45652f; transform: rotate(-12deg); }
-.zombie.spitter > img { filter: hue-rotate(35deg) saturate(.8) drop-shadow(0 5px 3px rgba(45,65,30,.25)); }
-.zombie.jumper .armor { display: block; width: 52%; height: 7%; left: 26%; top: 15%; background: #d65f91; border-radius: 5px; transform: rotate(-8deg); box-shadow: 12px 4px 0 -2px #f3a1bd; }
 .zombie.jumper > img { animation-duration: .28s; }
 .zombie.boss { width: 18%; height: 38%; }
 .zombie.boss::before { content: ""; position: absolute; inset: 6% -5% 0; border-radius: 50%; background: radial-gradient(circle, rgba(190,55,40,.28), transparent 68%); animation: bossAura 1s ease-in-out infinite alternate; }
-.zombie.boss .armor { display: block; width: 56%; height: 26%; left: 24%; top: -10%; background: linear-gradient(135deg,#ffe172,#b87524); clip-path: polygon(0 100%,0 20%,25% 58%,40% 0,60% 58%,83% 5%,100% 100%); filter: drop-shadow(0 3px 2px #6b351c66); }
-.zombie.boss > img { filter: saturate(.75) brightness(.72) drop-shadow(0 0 8px rgba(183,52,39,.65)); }
 .zombie.boss.enraged > img { filter: saturate(1.25) brightness(.82) drop-shadow(0 0 12px #e33f28); }
 .zombie.dying { z-index: 0; }
 .zombie.dying > img { animation: zombieFall var(--death-duration, 850ms) cubic-bezier(.34,.02,.66,1) forwards; transform-origin: 50% 92%; }
-.zombie.dying .armor, .zombie.dying::before { animation: deathFade calc(var(--death-duration, 850ms) * .55) ease forwards; }
+.zombie.dying::before { animation: deathFade calc(var(--death-duration, 850ms) * .55) ease forwards; }
 .zombie.dying .health-track { opacity: 0; }
 .baby-button { position: absolute; width: 9%; height: 19%; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto; }
 .baby-button img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 5px 3px rgba(65,65,30,.25)); transition: filter .2s, transform .2s; }
@@ -325,15 +313,15 @@ body.home-open #app > .home-footer { visibility: hidden; pointer-events: none; }
 .preview-tags .boss-tag { color: #a34d3c; background: #fff0e7; border-color: #efc2b1; }
 .preview-enemies { display: flex; flex-wrap: wrap; gap: 5px; }
 .enemy-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 999px; background: rgba(255,255,255,.62); font-size: 8px; font-weight: 800; color: #77856b; }
-.enemy-chip i { width: 6px; height: 6px; border-radius: 50%; background: #91a88a; }
-.enemy-chip.cone i { background: #e7983c; }
-.enemy-chip.bucket i { background: #8e9ca3; }
+.enemy-chip i { width: 6px; height: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(72, 92, 58, .3); background: #f2e3b6; }
+.enemy-chip.cone i { background: #f0a83c; }
+.enemy-chip.bucket i { background: #c9a27a; }
 .enemy-chip.runner i { background: #c77b53; }
-.enemy-chip.brute i { background: #765442; }
-.enemy-chip.spitter i { background: #7ca943; }
-.enemy-chip.jumper i { background: #b65f88; }
+.enemy-chip.brute i { background: #e0b8a0; }
+.enemy-chip.spitter i { background: #ffd95e; }
+.enemy-chip.jumper i { background: #b98a5a; }
 .enemy-chip.boss { color: #99483a; background: #fff0e5; }
-.enemy-chip.boss i { background: #a13f35; }
+.enemy-chip.boss i { background: #d94f3a; }
 .preview-action { position: relative; z-index: 1; min-width: 220px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; padding-left: 18px; border-left: 1px dashed #d9e2cb; }
 .preview-reward-label { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #957630; }
 .preview-reward { display: inline-flex; align-items: center; gap: 6px; color: #7b5412; font-size: 23px; font-weight: 900; font-variant-numeric: tabular-nums; }

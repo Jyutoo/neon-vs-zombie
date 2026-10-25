@@ -39,7 +39,7 @@
 - Consumes: 无（首个任务）。
 - Produces: `src/assets/enemies/<key>.png` 8 个文件，供 Task 2/3 的 `image` 字段引用；`tests/enemy-art.test.js` 与其中的 `ART` 表、`SRC` 常量，供 Task 2/3/4 追加断言时复用。
 
-- [ ] **Step 1: 拷贝原始参考图进仓库**
+- [x] **Step 1: 拷贝原始参考图进仓库**
 
 需求包解在一个 ASCII 临时目录（避开中文路径工具链问题）。源目录 = 本计划执行时由控制者提供的 `pack/assets/enemies` 路径，下记为 `$SRC_DIR`。
 
@@ -53,7 +53,7 @@ Expected: 8 个文件 —— `doujiao.jpg feidudu.jpg gugugaga-child.jpg lulu.jp
 
 若 `$SRC_DIR` 不存在，**停下来问控制者要路径**，不要自己造图或跳过。
 
-- [ ] **Step 2: 写失败测试**
+- [x] **Step 2: 写失败测试**
 
 创建 `tests/enemy-art.test.js`。断言真实文件，不复制任何生产逻辑。PNG 尺寸直接读 IHDR，不引入图片库依赖：
 
@@ -112,12 +112,12 @@ test('src/assets/enemies/ 下恰好 8 个文件，无多余产物', () => {
 });
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 Run: `node --test tests/enemy-art.test.js`
 Expected: FAIL —— `ENOENT: no such file or directory, scandir '...\src\assets\enemies'`
 
-- [ ] **Step 4: 写加工脚本**
+- [x] **Step 4: 写加工脚本**
 
 创建 `tools/prep-enemy-art.py`：
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 5: 跑脚本**
+- [x] **Step 5: 跑脚本**
 
 Run（在项目根执行，脚本自己算 `OUT`）:
 
@@ -247,7 +247,7 @@ cd "D:/奶龙大战僵尸" && "C:/Users/Lenovo/miniconda3/python.exe" tools/prep
 
 Expected: 7 行 `裁切框… → 导出 …` + 1 行占位 + `完成 →`，无异常退出。
 
-- [ ] **Step 6: 逐张目检（本任务真正的验收）**
+- [x] **Step 6: 逐张目检（本任务真正的验收）**
 
 用 Read 工具逐张看 `src/assets/enemies/` 下 8 张 PNG，检查四件事：
 
@@ -262,16 +262,16 @@ Expected: 7 行 `裁切框… → 导出 …` + 1 行占位 + `完成 →`，无
 - 抠穿了身体 → `TOLERANCE` 调小（先试 40）。
 - 水印进了画面 → 收紧裁切框右边界。
 
-- [ ] **Step 7: 跑测试确认通过**
+- [x] **Step 7: 跑测试确认通过**
 
 Run: `node --test tests/enemy-art.test.js`
 Expected: PASS，2 项。
 
-- [ ] **Step 8: 写素材契约说明**
+- [x] **Step 8: 写素材契约说明**
 
 创建 `src/assets/enemies/README.md`，内容含：8 个文件名与对应角色、spec §6.2 的导出高度表、**脚底贴画布下边缘**的锚点约定、透明底 PNG、"同名同规格覆盖即可，无需改代码"的替换契约、以及重新生成的命令（Step 5 那条）。
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 cd "D:/奶龙大战僵尸"
@@ -292,7 +292,7 @@ git commit -m "feat: 新增敌方角色形象加工流水线与 8 张立绘素�
 - Consumes: Task 1 的 `src/assets/enemies/*.png`；`tests/enemy-art.test.js` 里已有的 `SRC`、`ART` 常量与 `boot` 导入位。
 - Produces: `ZOMBIES[type].image` 字段；`window.__nailongTower.ZOMBIES` 与 `.spawnZombie` 两个新的调试句柄成员（Task 4 的浏览器实测、Task 6 的全量回归都靠它们逐种摆怪）。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `tests/enemy-art.test.js` 顶部补上导入（放在 `const path` 之后）：
 
@@ -336,12 +336,12 @@ test('模式A 渲染不再产出假护甲节点', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/enemy-art.test.js`
 Expected: FAIL —— `__nailongTower.ZOMBIES` 为 `undefined`（`TypeError: Cannot convert undefined or null to object`）
 
-- [ ] **Step 3: 给 ZOMBIES 加 image 并改名**
+- [x] **Step 3: 给 ZOMBIES 加 image 并改名**
 
 `src/js/game.js:25-34` 整块替换（数值字段一个不动）：
 
@@ -358,7 +358,7 @@ const ZOMBIES = {
 };
 ```
 
-- [ ] **Step 4: 渲染改读 image，删掉假护甲节点**
+- [x] **Step 4: 渲染改读 image，删掉假护甲节点**
 
 `src/js/game.js:1555` 整行替换：
 
@@ -366,7 +366,7 @@ const ZOMBIES = {
     element.innerHTML = `<img src="${ZOMBIES[zombie.type].image}" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
 ```
 
-- [ ] **Step 5: 扩调试句柄**
+- [x] **Step 5: 扩调试句柄**
 
 `src/js/game.js` 的 `window.__nailongTower = {` 块内，在 `game,` 之后插入三行：
 
@@ -380,7 +380,7 @@ const ZOMBIES = {
 
 若 Step 1 第二条测试在 `api.render()` 处因 DOM 桩缺东西而抛错，**补 `tests/helpers/browser-env.js` 的桩**（它是测试基建，允许扩展），不要改成断言源码文本来绕过去。
 
-- [ ] **Step 6: 删 CSS 假护甲，逐条点名**
+- [x] **Step 6: 删 CSS 假护甲，逐条点名**
 
 `src/css/styles.css` 删除以下整行（**不要按区间删**，`179`/`180`/`186`/`187`/`188`/`192`/`193` 必须保留）：
 
@@ -409,7 +409,7 @@ const ZOMBIES = {
 
 删完用 `grep -n "armor" src/css/styles.css` 确认零命中。
 
-- [ ] **Step 7: 图例点按新角色主色重调**
+- [x] **Step 7: 图例点按新角色主色重调**
 
 `src/css/styles.css:117-123` 七行整块替换：
 
@@ -425,23 +425,23 @@ const ZOMBIES = {
 
 （Boss 保留红色警示，不跟随形象成色。Task 6 浏览器实测时若发现相邻两点难分辨，按实际成图微调亮度即可。）
 
-- [ ] **Step 8: 语法检查 + 跑测试**
+- [x] **Step 8: 语法检查 + 跑测试**
 
 ```bash
 cd "D:/奶龙大战僵尸" && node --check src/js/game.js && node --test tests/enemy-art.test.js
 ```
 Expected: `node --check` 无输出；测试 PASS，4 项。
 
-- [ ] **Step 9: 跑全量测试确认无回归**
+- [x] **Step 9: 跑全量测试确认无回归**
 
 Run: `node --test tests/*.test.js`
 Expected: 全绿。既有 132 项**不应有任何修改**——若有用例红了，说明本任务误改了数值/波次/几何，回去比对而不是改用例。
 
-- [ ] **Step 10: 浏览器实测模式A**
+- [x] **Step 10: 浏览器实测模式A**
 
 起服务，进 `game.html`，用 `__nailongTower.spawnZombie` 逐种摆怪截图（完整配方见 Task 6 Step 4）。确认：8 种各是独立正面立绘、头顶不再长 CSS 路障/铁桶/皇冠、脚底贴地、`dying` 倒下动画仍生效。**看完关掉服务。**
 
-- [ ] **Step 11: 提交**
+- [x] **Step 11: 提交**
 
 ```bash
 git add src/js/game.js src/css/styles.css tests/enemy-art.test.js

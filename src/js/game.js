@@ -23,14 +23,14 @@ const TYPES = {
 };
 
 const ZOMBIES = {
-  basic: { name: '普通僵尸', hp: 190, speed: 11, bite: 24 },
-  cone: { name: '路障僵尸', hp: 325, speed: 11, bite: 27 },
-  bucket: { name: '铁桶僵尸', hp: 525, speed: 9, bite: 31 },
-  runner: { name: '快速僵尸', hp: 155, speed: 16, bite: 22 },
-  brute: { name: '大块头僵尸', hp: 1100, speed: 5.5, bite: 60 },
-  spitter: { name: '远程僵尸', hp: 260, speed: 8, bite: 24, range: 340, rate: 2.8, damage: 35 },
-  jumper: { name: '跳跃僵尸', hp: 190, speed: 20, bite: 26 },
-  boss: { name: '僵尸王', hp: 4200, speed: 3.8, bite: 70 }
+  basic: { name: '奶豆', image: 'assets/enemies/naidou.png', hp: 190, speed: 11, bite: 24 },
+  cone: { name: '肥嘟嘟', image: 'assets/enemies/feidudu.png', hp: 325, speed: 11, bite: 27 },
+  bucket: { name: '牛来', image: 'assets/enemies/niulai.png', hp: 525, speed: 9, bite: 31 },
+  runner: { name: '豆脚', image: 'assets/enemies/doujiao.png', hp: 155, speed: 16, bite: 22 },
+  brute: { name: '唐包', image: 'assets/enemies/tangbao.png', hp: 1100, speed: 5.5, bite: 60 },
+  spitter: { name: '噜噜', image: 'assets/enemies/lulu.png', hp: 260, speed: 8, bite: 24, range: 340, rate: 2.8, damage: 35 },
+  jumper: { name: '咕咕嘎嘎', image: 'assets/enemies/gugugaga.png', hp: 190, speed: 20, bite: 26 },
+  boss: { name: '奶康', image: 'assets/enemies/naikang.png', hp: 4200, speed: 3.8, bite: 70 }
 };
 
 const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
@@ -1552,7 +1552,7 @@ function render() {
   syncCollection('zombies', game.zombies, zombie => {
     const element = document.createElement('div');
     element.className = `entity zombie ${zombie.type}`;
-    element.innerHTML = `<div class="armor"></div><img src="assets/zombie.png" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
+    element.innerHTML = `<img src="${ZOMBIES[zombie.type].image}" alt="${ZOMBIES[zombie.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
     setEntityPosition(element, zombie);
     return element;
   }, (element, zombie) => {
@@ -1903,6 +1903,9 @@ window.__nailongTower = {
   get progress() { return progress; },
   set progress(value) { progress = value; },
   game,
+  ZOMBIES,
+  spawnZombie,
+  render,
   resetGame,
   startLevel,
   finishGame,

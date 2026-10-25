@@ -13,6 +13,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { boot } = require('./helpers/browser-env');
 
 const SRC = path.resolve(__dirname, '..', 'src');
 const ENEMIES_DIR = path.join(SRC, 'assets', 'enemies');
@@ -49,4 +50,36 @@ test('8 张敌人形象齐备且导出高度符合规格', () => {
 test('src/assets/enemies/ 下恰好 8 个文件，无多余产物', () => {
   const extra = fs.readdirSync(ENEMIES_DIR).filter(n => n !== 'README.md');
   assert.deepEqual(extra.sort(), Object.values(ART).map(a => a.file).sort());
+});
+
+test('模式A ZOMBIES 每项都有 image、文件在磁盘上、名字不含"僵尸"', () => {
+  const env = boot({ files: ['progress.js', 'game.js'] });
+  const ZOMBIES = env.global.__nailongTower.ZOMBIES;
+  assert.deepEqual(Object.keys(ZOMBIES), Object.keys(ART), '模式A 敌人表键集合变了');
+  for (const [type, cfg] of Object.entries(ZOMBIES)) {
+    assert.ok(cfg.image, `${type} 缺 image 字段`);
+    assert.match(cfg.image, /^assets\/enemies\/[a-z]+\.png$/, `${type} 的 image 路径不规范：${cfg.image}`);
+    assert.ok(fs.existsSync(path.join(SRC, cfg.image)), `${type} 的 ${cfg.image} 不在磁盘上`);
+    assert.equal(cfg.image, `assets/enemies/${ART[type].file}`, `${type} 的 image 与规格表不符`);
+    assert.ok(!cfg.name.includes('僵尸'), `${type} 仍叫「${cfg.name}」`);
+  }
+});
+
+test('模式A 渲染不再产出假护甲节点', () => {
+  const env = boot({ files: ['progress.js', 'game.js'] });
+  const api = env.global.__nailongTower;
+  api.game.sound = false;
+  api.startLevel(1);
+  for (const type of Object.keys(ART)) api.spawnZombie(type);
+  api.render();
+  // syncCollection 把 create() 产出的元素 appendChild 到 layers.zombies（game.js:1516），
+  // 即 #zombieLayer；browser-env 的 getElementById 会把该节点登记进 env.nodes。
+  const layer = env.nodes.get('zombieLayer');
+  const markup = layer.children.map(node => node.innerHTML).join('\n');
+  assert.equal(layer.children.length, Object.keys(ART).length, '敌人 DOM 数量与摆怪数不符，探针失效');
+  assert.ok(markup, '没有取到任何敌人 DOM');
+  assert.ok(!markup.includes('class="armor"'), '仍在渲染 <div class="armor">');
+  for (const type of Object.keys(ART)) {
+    assert.ok(markup.includes(ART[type].file), `没有渲染 ${ART[type].file}`);
+  }
 });
