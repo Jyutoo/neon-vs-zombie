@@ -47,7 +47,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(239, 180, 48, .8
 .hero h1 { margin: 8px 0 4px; font-size: 64px; line-height: 1.05; letter-spacing: 4px; color: #355b38; text-shadow: 0 4px 0 #fff, 0 10px 18px rgba(53, 91, 56, .18); }
 .subtitle { margin: 0; font-size: 18px; font-weight: 700; color: #718273; letter-spacing: 6px; }
 
-.mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin: 40px auto 0; }
+.mode-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 40px auto 0; }
 .mode-card {
   position: relative;
   display: flex;
@@ -71,14 +71,23 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(239, 180, 48, .8
 .mode-card img { position: absolute; right: 18px; bottom: 16px; height: 132px; object-fit: contain; filter: drop-shadow(0 8px 8px rgba(80, 56, 23, .22)); }
 .mode-tag { display: inline-block; padding: 5px 12px; border-radius: 999px; background: #7fae5a; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 1px; }
 .mode-card.action .mode-tag { background: #d97f3a; }
+.mode-card.upgrade { background: linear-gradient(160deg, #e8f5d8, #c5e8a0); border-color: #a8d96f; }
+.mode-card.upgrade .mode-tag { background: #b8860b; }
+.mode-card.upgrade p { color: #5a6b40; }
+.mode-card.upgrade .mode-cta { color: #8a6d0b; }
+.mode-card.upgrade img { height: 100px; }
 .mode-card strong { font-size: 28px; letter-spacing: 1px; }
 .mode-card p { margin: 0; max-width: 62%; font-size: 14px; line-height: 1.7; color: #7a6040; }
 .mode-cta { margin-top: auto; font-size: 14px; font-weight: 800; color: #a56725; }
 .mode-cta::after { content: " →"; }
 
 .menu-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 36px; color: #6d8366; font-size: 13px; }
+.custard-banner { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 28px; padding: 14px 24px; border-radius: 18px; background: rgba(255,253,243,.85); border: 2px solid #e8c184; font-size: 16px; color: #4b3418; backdrop-filter: blur(6px); }
+.custard-banner strong { font-size: 22px; color: #b8860b; min-width: 40px; text-align: right; }
 .text-button { border: 0; background: transparent; color: #4f7048; font-weight: 800; cursor: pointer; padding: 8px 4px; border-bottom: 2px solid transparent; }
 .text-button:hover { border-bottom-color: #7fae5a; }
+.upgrade-entry { text-decoration: none; color: #b8860b; font-weight: 800; }
+.upgrade-entry:hover { border-bottom-color: #b8860b; color: #9a7209; }
 
 .modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(36, 55, 34, .45); backdrop-filter: blur(6px); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s ease; }
 .modal.visible { opacity: 1; visibility: visible; }

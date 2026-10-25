@@ -3,7 +3,7 @@
     arena: { width: 1280, height: 720, groundY: 560, minX: 60, maxX: 1220, endlessStartX: 240 },
     progression: { xpBase: 30, xpStep: 20, upgradeCount: 3 },
     level: {
-      worldWidth: 5120,
+      maxLevel: 12,
       screenWidth: 1280,
       startX: 200,
       edgeMargin: 70,
@@ -12,12 +12,22 @@
       rightMargin: 80,
       batchDelay: 1.2,
       spawnInterval: 0.6,
+      // Combat screens for level 1. levelConfig() grows them and appends the
+      // boss screen, so each of the twelve levels fights differently.
       screens: [
         { batches: [['basic', 'basic', 'basic'], ['basic', 'cone', 'cone']] },
         { batches: [['cone', 'cone', 'runner', 'runner'], ['basic', 'bucket'], ['elite', 'basic', 'basic']] },
-        { batches: [['cone', 'cone', 'bucket', 'bucket'], ['runner', 'runner', 'basic', 'basic'], ['elite', 'cone', 'cone']] },
-        { boss: true }
-      ]
+        { batches: [['cone', 'cone', 'bucket', 'bucket'], ['runner', 'runner', 'basic', 'basic'], ['elite', 'cone', 'cone']] }
+      ],
+      progression: {
+        hpPerLevel: 0.1,
+        dmgPerLevel: 0.05,
+        speedPerLevel: 0.02,
+        maxSpeedMul: 1.35,
+        bossHpPerLevel: 0.15,
+        extraScreenEvery: 4,
+        extraEnemyEvery: 4
+      }
     },
     player: {
       maxHp: 100,
@@ -44,7 +54,6 @@
         maxHp: 100,
         speed: 300,
         attackDamageMul: 1,
-        attackSpeedMul: 1,
         heavyDamageMul: 1,
         heavyKnockbackMul: 1,
         fireDamageMul: 1,
@@ -85,10 +94,9 @@
     },
     upgrades: [
       { id: 'power', name: '奶香重拳', desc: '普攻伤害 +20%', apply: { attackDamageMul: 1.2 } },
-      { id: 'swift', name: '疾风连击', desc: '普攻攻速 +12%', apply: { attackSpeedMul: 1.12 } },
       { id: 'ironhead', name: '铁头功', desc: '重击伤害 +30%，击退 +25%', apply: { heavyDamageMul: 1.3, heavyKnockbackMul: 1.25 } },
-      { id: 'breath', name: '龙息精炼', desc: '喷火伤害 +30%', apply: { fireDamageMul: 1.3 } },
-      { id: 'deepbreath', name: '深呼吸', desc: '喷火冷却 -20%', apply: { fireCooldownMul: 0.8 } },
+      { id: 'breath', name: '音波强化', desc: '音波伤害 +30%', apply: { fireDamageMul: 1.3 } },
+      { id: 'deepbreath', name: '深呼吸', desc: '音波冷却 -20%', apply: { fireCooldownMul: 0.8 } },
       { id: 'agility', name: '灵活走位', desc: '移动速度 +10%', apply: { moveSpeedMul: 1.1 } },
       { id: 'milk', name: '奶量充足', desc: '最大生命 +20 并回满', apply: { maxHpAdd: 20 } },
       { id: 'vamp', name: '越战越勇', desc: '每次击杀回复 2 生命', apply: { lifestealAdd: 2 } },
@@ -107,8 +115,7 @@
       healRatio: 0.15,
       bossHpGrowth: 0.3,
       scaling: { hp: 0.08, dmg: 0.05, speed: 0.02, maxSpeedMul: 1.4 }
-    },
-    storageKeys: { endlessBest: 'nailong.action.endlessBest' }
+    }
   };
 
   if (typeof module === 'object' && module.exports) module.exports = ACTION_DATA;

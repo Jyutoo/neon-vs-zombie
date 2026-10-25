@@ -2,6 +2,13 @@
   const DATA = window.ACTION_DATA;
   const Logic = window.ActionLogic;
 
+  const PLAYER_BODY_HEIGHT = 128;
+  const ENEMY_BODY_HEIGHT = 118;
+  const enemyBodyHeight = enemy => ENEMY_BODY_HEIGHT * enemy.cfg.scale;
+  const FIRE_MOUTH_OFFSET = 70;
+  const FIRE_BAND_HEIGHT = 92;
+  const FIRE_BACK_TOLERANCE = 20;
+
   const stage = document.getElementById('stage');
   const world = document.getElementById('world');
   const parallax = Array.from(document.querySelectorAll('.parallax'));
@@ -43,7 +50,7 @@
       swing: () => tone(260, 0.05, 'triangle'),
       hit: () => tone(120, 0.06, 'square', 0.02),
       heavy: () => { tone(90, 0.12, 'sawtooth', 0.03); tone(60, 0.18, 'sawtooth', 0.02, 0.05); },
-      fire: () => tone(150, 0.2, 'sawtooth', 0.02),
+      fire: () => tone(600, 0.15, 'sine', 0.025),
       dash: () => tone(520, 0.08, 'triangle', 0.015),
       hurt: () => tone(110, 0.15, 'square', 0.02),
       death: () => tone(180, 0.12, 'triangle', 0.02),
@@ -57,8 +64,39 @@
 
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode') === 'endless' ? 'endless' : 'level';
+  const levelParam = Math.max(1, Math.min(DATA.level.maxLevel, parseInt(params.get('level')) || 1));
+  const levelFlow = mode === 'level' ? Logic.levelConfig(levelParam) : null;
+
+  function loadActionProgress() {
+    return ProgressStore.load();
+  }
+
+  function getUpgradeMultiplier(totalLevels, percentPerLevel) {
+    return 1 + (totalLevels * percentPerLevel / 100);
+  }
+
+  function applyModeBUpgrades() {
+    const progress = loadActionProgress();
+    const upgrades = progress.upgrades || {};
+    return {
+      autoHealPerSec: (upgrades.egg || 0) * 1,
+      skillCooldownMul: 1 - Math.min(0.7,
+        ((upgrades.rat || 0) + (upgrades.rabbit || 0) + (upgrades.rooster || 0)) * 0.1
+      ),
+      attackDamageMul: getUpgradeMultiplier(
+        (upgrades.ox || 0) + (upgrades.tiger || 0) + (upgrades.monkey || 0), 15
+      ),
+      dotDamageMul: getUpgradeMultiplier(
+        (upgrades.snake || 0) + (upgrades.dragon || 0), 20
+      ),
+      healOnKill: ((upgrades.horse || 0) + (upgrades.goat || 0)) * 2,
+      shieldHp: ((upgrades.dog || 0) + (upgrades.pig || 0)) * 30
+    };
+  }
 
   function createPlayer(mode) {
+    const upgradeEffects = applyModeBUpgrades();
+    const bonusHp = upgradeEffects.shieldHp;
     return {
       x: mode === 'level' ? DATA.level.startX : DATA.arena.endlessStartX,
       y: DATA.arena.groundY,
@@ -66,7 +104,8 @@
       facing: 1,
       onGround: true,
       jumps: 0,
-      hp: DATA.player.maxHp,
+      hp: DATA.player.maxHp + bonusHp,
+      maxHpBase: DATA.player.maxHp + bonusHp,
       coyote: 0,
       jumpBuffer: 0,
       action: null,
@@ -83,12 +122,19 @@
       dashReadyAt: 0,
       dashUntil: 0,
       dashIframesUntil: 0,
-      invulnUntil: 0
+      invulnUntil: 0,
+      autoHealPerSec: upgradeEffects.autoHealPerSec,
+      healOnKill: upgradeEffects.healOnKill,
+      persistentAttackDamageMul: upgradeEffects.attackDamageMul,
+      persistentDotDamageMul: upgradeEffects.dotDamageMul,
+      persistentSkillCooldownMul: upgradeEffects.skillCooldownMul
     };
   }
 
   const state = {
     mode,
+    levelParam,
+    levelFlow,
     status: 'playing',
     sound: true,
     helpReturn: null,
@@ -96,7 +142,7 @@
     cameraX: 0,
     shake: 0,
     hitstop: 0,
-    worldWidth: mode === 'level' ? DATA.level.worldWidth : DATA.arena.width,
+    worldWidth: levelFlow ? levelFlow.worldWidth : DATA.arena.width,
     levelPhase: 'combat',
     screenIndex: 0,
     screenCleared: false,
@@ -119,10 +165,18 @@
     nextId: 1
   };
 
+  // Apply persistent upgrade multipliers to stats (stack multiplicatively with roguelike)
+  const p = state.player;
+  state.stats.maxHp = p.maxHpBase;
+  state.stats.attackDamageMul *= p.persistentAttackDamageMul;
+  state.stats.fireDamageMul *= p.persistentDotDamageMul;
+  state.stats.fireCooldownMul *= p.persistentSkillCooldownMul;
+  state.stats.dashCooldownMul *= p.persistentSkillCooldownMul;
+
   const keys = new Set();
   const playerEl = document.createElement('div');
   playerEl.className = 'player';
-  playerEl.innerHTML = '<img src="assets/dragon.png" alt="奶龙">';
+  playerEl.innerHTML = '<img src="assets/baby-glance.png" alt="奶娃">';
   playerLayer.appendChild(playerEl);
 
   function resize() {
@@ -209,9 +263,9 @@
     const p = state.player;
     return {
       x: p.facing > 0 ? p.x + 6 : p.x - range - 6,
-      y: p.y - 128,
+      y: p.y - PLAYER_BODY_HEIGHT,
       w: range,
-      h: 128
+      h: PLAYER_BODY_HEIGHT
     };
   }
 
@@ -233,6 +287,7 @@
       state.kills += 1;
       sound('death');
       if (state.stats.lifesteal > 0) healPlayer(state.stats.lifesteal);
+      if (state.player.healOnKill > 0) healPlayer(state.player.healOnKill);
       gainXp(enemy.cfg.xp);
     }
   }
@@ -325,7 +380,7 @@
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0 || p.hitIds.has(enemy.id)) continue;
       const width = 68 * enemy.cfg.scale;
-      const height = 118 * enemy.cfg.scale;
+      const height = enemyBodyHeight(enemy);
       const body = { x: enemy.x - width / 2, y: enemy.y - height, w: width, h: height };
       if (!Logic.rectsOverlap(box, body)) continue;
       p.hitIds.add(enemy.id);
@@ -384,18 +439,25 @@
   function resolveFireBreath() {
     const p = state.player;
     const fire = DATA.player.fire;
+    const box = {
+      x: p.facing > 0 ? p.x - FIRE_BACK_TOLERANCE : p.x - fire.range - FIRE_BACK_TOLERANCE,
+      y: p.y - FIRE_MOUTH_OFFSET - FIRE_BAND_HEIGHT / 2,
+      w: fire.range + FIRE_BACK_TOLERANCE,
+      h: FIRE_BAND_HEIGHT
+    };
     for (const enemy of [...state.enemies]) {
       if (enemy.hp <= 0) continue;
-      const dx = enemy.x - p.x;
-      if (Math.abs(dx) > fire.range) continue;
-      if (Math.sign(dx) !== p.facing && Math.abs(dx) > 20) continue;
+      const width = 68 * enemy.cfg.scale;
+      const height = enemyBodyHeight(enemy);
+      const body = { x: enemy.x - width / 2, y: enemy.y - height, w: width, h: height };
+      if (!Logic.rectsOverlap(box, body)) continue;
       damageEnemy(enemy, fire.damage * state.stats.fireDamageMul, 30, p.facing);
       if (enemy.hp > 0) {
         enemy.burnUntil = state.time + fire.burnSeconds;
         enemy.burnTick = state.time + 1;
       }
     }
-    spawnEffect('', p.x + p.facing * (fire.range / 2), p.y - 70, 'fire-breath', fire.range);
+    spawnEffect('', p.x + p.facing * (fire.range / 2), p.y - FIRE_MOUTH_OFFSET, 'fire-breath', fire.range);
   }
 
   function updatePlayerAction(dt) {
@@ -473,7 +535,10 @@
   }
 
   function spawnEnemy(type, x, overrides = {}) {
-    const cfg = { ...DATA.enemies[type], ...overrides };
+    const base = state.levelFlow
+      ? Logic.scaleEnemy(DATA.enemies[type], state.levelFlow.scaling)
+      : DATA.enemies[type];
+    const cfg = { ...base, ...overrides };
     const enemy = {
       id: state.nextId++,
       type,
@@ -503,6 +568,7 @@
   function spawnBoss() {
     const cfg = DATA.boss;
     const bounds = bossBounds();
+    const hp = state.levelFlow ? state.levelFlow.bossHp : cfg.hp;
     const boss = {
       id: state.nextId++,
       type: 'boss',
@@ -510,8 +576,8 @@
       x: Math.max(bounds.min, Math.min(bounds.max, state.player.x + 700)),
       y: DATA.arena.groundY,
       facing: -1,
-      hp: cfg.hp,
-      maxHp: cfg.hp,
+      hp,
+      maxHp: hp,
       state: 'idle',
       action: null,
       actionTimer: 0,
@@ -595,7 +661,7 @@
     }
     if (boss.burnUntil > state.time && state.time >= boss.burnTick) {
       boss.burnTick += 1;
-      damageEnemy(boss, DATA.player.fire.burnDps, 0, 1);
+      damageEnemy(boss, DATA.player.fire.burnDps * state.player.persistentDotDamageMul, 0, 1);
       if (boss.hp <= 0) return;
     }
     if (!boss.phase2 && boss.hp <= boss.maxHp * DATA.boss.phase2At) {
@@ -640,7 +706,9 @@
       boss.state = 'charge';
       boss.x += DATA.boss.charge.speed * boss.facing * dt;
       boss.x = Math.max(bounds.min, Math.min(bounds.max, boss.x));
-      if (!boss.chargeDamageDone && Math.abs(boss.x - state.player.x) < 90) {
+      if (!boss.chargeDamageDone
+          && Math.abs(boss.x - state.player.x) < 90
+          && Logic.verticalOverlap(state.player.y, PLAYER_BODY_HEIGHT, boss.y, enemyBodyHeight(boss))) {
         boss.chargeDamageDone = true;
         hurtPlayer(DATA.boss.charge.damage);
         state.shake = Math.max(state.shake, 0.3);
@@ -711,7 +779,7 @@
     if (enemy.hp <= 0) { enemy.dying = Math.max(0, enemy.dying - dt); return; }
     if (enemy.burnUntil > state.time && state.time >= enemy.burnTick) {
       enemy.burnTick += 1;
-      damageEnemy(enemy, DATA.player.fire.burnDps, 0, 1);
+      damageEnemy(enemy, DATA.player.fire.burnDps * state.player.persistentDotDamageMul, 0, 1);
       if (enemy.hp <= 0) return;
     }
     if (enemy.hurt > 0) {
@@ -724,7 +792,9 @@
     if (enemy.state === 'windup') {
       enemy.windup -= dt;
       if (enemy.windup <= 0) {
-        if (Math.abs(p.x - enemy.x) <= enemy.cfg.range + 12) hurtPlayer(enemy.cfg.damage);
+        const inReach = Math.abs(p.x - enemy.x) <= enemy.cfg.range + 12
+          && Logic.verticalOverlap(p.y, PLAYER_BODY_HEIGHT, enemy.y, enemyBodyHeight(enemy));
+        if (inReach) hurtPlayer(enemy.cfg.damage);
         enemy.windup = enemy.cfg.windup;
         enemy.cooldown = enemy.cfg.interval;
         enemy.state = 'idle';
@@ -779,17 +849,24 @@
     if (state.status !== 'playing') return;
     state.status = 'won';
     keys.clear();
+    // Save progress for level mode
+    if (state.mode === 'level') {
+      ProgressStore.update(saved => {
+        saved.actionHighestCleared = Math.max(saved.actionHighestCleared,
+          Math.min(ProgressStore.MAX_LEVEL, state.levelParam));
+      });
+    }
     const total = Math.floor(state.time);
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
     openOverlay(`
       <div class="result-card">
         <span class="eyebrow">闯关成功</span>
-        <h2>僵尸王被击败了！</h2>
+        <h2>第 ${state.levelParam} 关通过！</h2>
         <p>用时 ${minutes} 分 ${seconds} 秒，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
         <div class="result-actions">
           <button id="retryButton" class="primary-button">再玩一次</button>
-          <a class="primary-button ghost" href="index.html">返回主菜单</a>
+          <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
         </div>
       </div>`);
     document.getElementById('retryButton').addEventListener('click', resetActionGame);
@@ -831,6 +908,14 @@
 
     state.player = createPlayer(state.mode);
 
+    // Re-apply persistent upgrade multipliers to stats after reset
+    const rp = state.player;
+    state.stats.maxHp = rp.maxHpBase;
+    state.stats.attackDamageMul *= rp.persistentAttackDamageMul;
+    state.stats.fireDamageMul *= rp.persistentDotDamageMul;
+    state.stats.fireCooldownMul *= rp.persistentSkillCooldownMul;
+    state.stats.dashCooldownMul *= rp.persistentSkillCooldownMul;
+
     playerEl.classList.remove('hurt', 'invulnerable', 'flip');
     keys.clear();
     closeOverlay();
@@ -857,11 +942,11 @@
     openOverlay(`
     <div class="result-card">
       <span class="eyebrow">本局结束</span>
-      <h2>奶龙倒下了</h2>
-      <p>到达第 ${Math.min(state.screenIndex + 1, DATA.level.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
+      <h2>奶娃倒下了</h2>
+      <p>到达第 ${Math.min(state.screenIndex + 1, state.levelFlow.screens.length)} 屏，击杀 ${state.kills} 只僵尸，最高连击 ${state.combo.max}，达到 Lv.${state.level}。</p>
       <div class="result-actions">
         <button id="retryButton" class="primary-button">重新挑战</button>
-        <a class="primary-button ghost" href="index.html">返回主菜单</a>
+        <a class="primary-button ghost" href="action-levels.html">返回关卡选择</a>
       </div>
     </div>`);
     document.getElementById('retryButton').addEventListener('click', resetActionGame);
@@ -939,7 +1024,7 @@
     state.screenCleared = false;
     state.levelPhase = 'combat';
     state.spawnQueue = [];
-    const screen = DATA.level.screens[index];
+    const screen = state.levelFlow.screens[index];
     const boundary = (index + 1) * DATA.level.screenWidth;
     if (screen.boss) {
       state.levelPhase = 'boss';
@@ -959,7 +1044,7 @@
       offset += DATA.level.batchDelay;
     });
     state.spawnQueue.sort((a, b) => a.at - b.at);
-    stageLabel.textContent = `第 ${index + 1} / ${DATA.level.screens.length - 1} 段`;
+    stageLabel.textContent = `第 ${index + 1} / ${state.levelFlow.screens.length - 1} 段`;
   }
 
   function startWave(wave) {
@@ -997,19 +1082,17 @@
   }
 
   function finishEndless() {
-    const key = DATA.storageKeys.endlessBest;
-    let newRecord = false;
-    try {
-      const best = JSON.parse(localStorage.getItem(key) || 'null');
-      if (!best || state.wave > best.wave) {
-        localStorage.setItem(key, JSON.stringify({
+    const previousBest = ProgressStore.load().endlessBest.wave;
+    const newRecord = state.wave > previousBest;
+    if (newRecord) {
+      ProgressStore.update(saved => {
+        saved.endlessBest = {
           wave: state.wave,
           kills: state.kills,
           date: new Date().toISOString().slice(0, 10)
-        }));
-        newRecord = true;
-      }
-    } catch {}
+        };
+      });
+    }
     openOverlay(`
       <div class="result-card">
         <span class="eyebrow">无尽模式</span>
@@ -1025,7 +1108,7 @@
 
   function updateLevelFlow() {
     const p = state.player;
-    const screen = DATA.level.screens[state.screenIndex];
+    const screens = state.levelFlow.screens;
     const boundary = (state.screenIndex + 1) * DATA.level.screenWidth;
 
     if (state.levelPhase !== 'advance') {
@@ -1041,18 +1124,20 @@
     }
 
     if (state.levelPhase === 'advance') {
-      if (state.screenIndex < DATA.level.screens.length - 1 && p.x >= boundary + DATA.level.edgeMargin) {
+      if (state.screenIndex < screens.length - 1 && p.x >= boundary + DATA.level.edgeMargin) {
         startScreen(state.screenIndex + 1);
       }
       return;
     }
 
-    if (state.levelPhase !== 'combat' && state.levelPhase !== 'boss') return;
+    // Only combat screens advance on a wipe. The win check needs levelPhase to
+    // stay 'boss' until the boss dies, and the boss is often the last enemy.
+    if (state.levelPhase !== 'combat') return;
 
     if (!state.spawnQueue.length && !state.enemies.some(enemy => enemy.hp > 0)) {
       state.screenCleared = true;
       state.levelPhase = 'advance';
-      if (state.screenIndex === DATA.level.screens.length - 2) {
+      if (state.screenIndex === screens.length - 2) {
         stageLabel.textContent = '前往僵尸王';
         announceWave('前方就是僵尸王');
       } else {
@@ -1086,6 +1171,11 @@
       return;
     }
     updatePlayer(dt);
+    // Auto heal from egg upgrade
+    if (state.player.autoHealPerSec > 0 && state.status === 'playing') {
+      state.player.hp = Math.min(state.stats.maxHp,
+        state.player.hp + state.player.autoHealPerSec * dt);
+    }
     updatePlayerAction(dt);
     if (state.mode === 'level') updateLevelFlow();
     else updateEndless(dt);
@@ -1190,7 +1280,7 @@
       <div class="result-card help-card">
         <span class="eyebrow">玩法说明</span>
         <h2>奶龙战僵尸</h2>
-        <p>A/D 或方向键移动，空格跳跃（获得二段跳后可再跳一次），J 普攻三连，空中 J 跳劈，K 重击，L 喷火，Shift 冲刺，Esc / P 暂停。</p>
+        <p>A/D 或方向键移动，空格跳跃（获得二段跳后可再跳一次），J 普攻三连，空中 J 跳劈，K 重击，L 音波，Shift 冲刺，Esc / P 暂停。</p>
         <p>击杀敌人获得经验，升级时三选一强化。闯关模式三段清怪后挑战僵尸王；无尽模式波次无限增强，每 5 波精英、每 10 波僵尸王。</p>
         <div class="result-actions"><button id="helpClose" class="primary-button">知道了</button></div>
       </div>`);
@@ -1254,5 +1344,9 @@
   requestAnimationFrame(frame);
   setTimeout(() => document.getElementById('tipBar').classList.add('hidden'), 8000);
 
-  window.__nailong = { state, spawnEnemy, hurtPlayer, startScreen, spawnBoss, gainXp, resetActionGame };
+  window.__nailong = {
+    state, spawnEnemy, spawnBoss, damageEnemy, update, updateLevelFlow,
+    startScreen, hurtPlayer, gainXp, winLevel, finishEndless, resetActionGame,
+    applyModeBUpgrades, getUpgradeMultiplier
+  };
 })();

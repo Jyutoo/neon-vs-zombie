@@ -36,49 +36,53 @@ const ZOMBIES = {
 const LAUGH_DAMAGE = { brute: 650, boss: 1400 };
 const DEATH_DURATION = { basic: 850, cone: 850, bucket: 850, runner: 850, spitter: 850, jumper: 850, brute: 1050, boss: 1400 };
 
-const STARTING_UNITS = ['egg', 'snake', 'ox', 'monkey'];
+const STARTING_UNITS = ProgressStore.STARTING_UNITS;
 const UNIT_ORDER = ['egg', 'snake', 'ox', 'monkey', 'rat', 'rabbit', 'dog', 'tiger', 'goat', 'rooster', 'pig', 'horse', 'dragon'];
-const UNLOCK_COSTS = { rat: 100, rabbit: 140, dog: 160, tiger: 220, goat: 240, rooster: 260, pig: 280, horse: 320, dragon: 380 };
-const SAVE_KEY = 'nailong-vs-zombies-progress-v1';
-const WAVE_COUNT = 5;
-const BASE_WAVE_COUNTS = [3, 4, 6, 8, 10];
-const WAVE_STARTS = [12, 48, 88, 132, 180];
-const WAVE_INTERVALS = [8, 7, 6.5, 6, 5.5];
-
-function defaultProgress() {
-  return { coins: 0, totalEarned: 0, highestCleared: 0, selectedLevel: 1, unlocked: [...STARTING_UNITS] };
+const CHARACTER_UNLOCK_LEVELS = ProgressStore.CHARACTER_UNLOCK_LEVELS;
+const MAX_LEVEL = ProgressStore.MAX_LEVEL;
+function levelWaveCount(level) {
+  if (level <= 3) return 5;
+  if (level <= 6) return 6;
+  if (level <= 9) return 7;
+  if (level <= 11) return 8;
+  return 10; // level 12
 }
 
-function loadProgress() {
-  const fallback = defaultProgress();
-  try {
-    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (!raw || typeof raw !== 'object') return fallback;
-    const valid = Object.keys(TYPES);
-    const unlocked = [...new Set((Array.isArray(raw.unlocked) ? raw.unlocked : []).filter(key => valid.includes(key)))];
-    STARTING_UNITS.forEach(key => { if (!unlocked.includes(key)) unlocked.push(key); });
-    const highestCleared = Math.max(0, Math.floor(Number(raw.highestCleared) || 0));
-    const coins = Math.max(0, Math.floor(Number(raw.coins) || 0));
-    const totalEarned = Math.max(coins, Math.floor(Number(raw.totalEarned) || 0));
-    const selectedLevel = Math.min(highestCleared + 1, Math.max(1, Math.floor(Number(raw.selectedLevel) || 1)));
-    return { coins, totalEarned, highestCleared, selectedLevel, unlocked };
-  } catch {
-    return fallback;
+function levelWaveConfig(level) {
+  const count = levelWaveCount(level);
+  const starts = [];
+  const intervals = [];
+  for (let i = 0; i < count; i++) {
+    starts.push(12 + i * 36);
+    intervals.push(Math.max(4, 8 - i * 0.4));
   }
+  return { starts, intervals };
 }
 
 function saveProgress() {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
-  } catch {}
+  ProgressStore.save(progress);
 }
 
-let progress = loadProgress();
+let progress = ProgressStore.load();
 let homeTrackStart = 1;
 let lastResult = null;
 
 function isUnlocked(key) {
-  return progress.unlocked.includes(key);
+  return ProgressStore.isCharacterUnlocked(key, progress);
+}
+
+function checkCharacterUnlocks() {
+  let newUnlocks = [];
+  for (const [char, level] of Object.entries(CHARACTER_UNLOCK_LEVELS)) {
+    if (progress.highestCleared >= level && !progress.unlocked.includes(char)) {
+      progress.unlocked.push(char);
+      newUnlocks.push(TYPES[char].name);
+    }
+  }
+  if (newUnlocks.length > 0) {
+    saveProgress();
+    toast(`解锁新角色：${newUnlocks.join('、')}`);
+  }
 }
 
 function seededRandom(seed) {
@@ -113,16 +117,22 @@ function enemyPoolForLevel(level, waveIndex) {
 
 function levelWaves(level) {
   const random = seededRandom(level * 7919 + 13);
-  const extra = Math.min(6, Math.floor((level - 1) / 2));
-  return BASE_WAVE_COUNTS.map((baseCount, waveIndex) => {
+  const waveCount = levelWaveCount(level);
+  const config = levelWaveConfig(level);
+  const waves = [];
+
+  for (let waveIndex = 0; waveIndex < waveCount; waveIndex++) {
     const pool = enemyPoolForLevel(level, waveIndex);
+    const baseCount = 3 + Math.floor(waveIndex * 1.2);
     const types = [];
-    for (let i = 0; i < baseCount + extra; i++) {
+    for (let i = 0; i < baseCount; i++) {
       types.push(pool[Math.floor(random() * pool.length)]);
     }
-    if (waveIndex === WAVE_COUNT - 1 && level % 5 === 0) types.push('boss');
-    return { start: WAVE_STARTS[waveIndex], interval: WAVE_INTERVALS[waveIndex], types };
-  });
+    // Boss only on level 12, last wave
+    if (level === 12 && waveIndex === waveCount - 1) types.push('boss');
+    waves.push({ start: config.starts[waveIndex], interval: config.intervals[waveIndex], types });
+  }
+  return waves;
 }
 
 function enemyTypesForLevel(level) {
@@ -132,12 +142,12 @@ function enemyTypesForLevel(level) {
   if (level >= 4) types.push('jumper');
   if (level >= 5) types.push('spitter');
   if (level >= 6) types.push('brute');
-  if (level % 5 === 0) types.push('boss');
+  if (level === 12) types.push('boss');
   return types;
 }
 
 function firstClearReward(level) {
-  return 100 + (level - 1) * 50 + Math.floor((level - 1) / 5) * 50;
+  return 50 + (level - 1) * 15;
 }
 
 function repeatReward(level) {
@@ -145,12 +155,34 @@ function repeatReward(level) {
 }
 
 function difficultyLabel(level) {
-  if (level % 5 === 0) return 'BOSS 关';
-  if (level <= 2) return '入门';
-  if (level <= 5) return '进阶';
-  if (level <= 9) return '精英';
-  if (level <= 14) return '噩梦';
-  return '地狱';
+  if (level === 12) return 'BOSS 关';
+  if (level <= 3) return '入门';
+  if (level <= 6) return '进阶';
+  if (level <= 9) return '中级';
+  if (level <= 11) return '高级';
+  return '最终BOSS';
+}
+
+function getUpgradeMultiplier(totalLevels, percentPerLevel) {
+  return 1 + (totalLevels * percentPerLevel / 100);
+}
+
+function applyModeAUpgrades() {
+  const upgrades = progress.upgrades || {};
+  return {
+    babyUses: 1 + (upgrades.egg || 0),
+    babyDamageMul: getUpgradeMultiplier(
+      (upgrades.ox || 0) + (upgrades.tiger || 0) + (upgrades.monkey || 0), 15
+    ),
+    babyDotMul: getUpgradeMultiplier(
+      (upgrades.snake || 0) + (upgrades.dragon || 0), 20
+    ),
+    babyHealPerUse: ((upgrades.horse || 0) + (upgrades.goat || 0)) * 10,
+    babyShieldPerUse: ((upgrades.dog || 0) + (upgrades.pig || 0)) * 20,
+    babyCooldownMul: 1 - Math.min(0.7,
+      ((upgrades.rat || 0) + (upgrades.rabbit || 0) + (upgrades.rooster || 0)) * 0.1
+    )
+  };
 }
 
 const $ = id => document.getElementById(id);
@@ -168,7 +200,9 @@ let toastTimer;
 let audioContext;
 const activeBabyVideos = new Set();
 const activeBabyRenderers = new Map();
-const BABY_VIDEO_CROP = { x: 24, y: 82, width: 252, height: 348 };
+// 裁切框是 baby-laugh.mp4 的原始像素坐标（592×1280 手机录屏），
+// 取这个矩形是为了同时躲开状态栏、录屏胶囊、底部"停止"按钮和左边缘 1px 黑边。
+const BABY_VIDEO_CROP = { x: 48, y: 304, width: 504, height: 696 };
 const BABY_CANVAS_WIDTH = 176;
 const BABY_CANVAS_HEIGHT = 243;
 let noiseBuffer;
@@ -279,7 +313,7 @@ function applyCardLocks() {
     const locked = !isUnlocked(key);
     card.classList.toggle('locked', locked);
     card.setAttribute('aria-disabled', String(locked));
-    card.title = locked ? `通关获得奶币后，在主页面解锁${TYPES[key].name}` : '';
+    card.title = locked && CHARACTER_UNLOCK_LEVELS[key] ? `通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关解锁${TYPES[key].name}` : '';
   });
   $('unitCount').textContent = `可用 ${progress.unlocked.length} / ${Object.keys(TYPES).length}`;
 }
@@ -414,7 +448,7 @@ function showUnitDetail(key) {
     $('unitDetail').innerHTML = `
       <div class="detail-title"><strong>${type.name}</strong><span>${type.role}</span></div>
       <p>${type.description}</p>
-      <div class="detail-stats"><span>未解锁</span><span>主页解锁需 ${UNLOCK_COSTS[key]} 奶币</span></div>`;
+      <div class="detail-stats"><span>未解锁</span><span>通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关解锁</span></div>`;
     return;
   }
   $('unitDetail').innerHTML = `
@@ -428,7 +462,7 @@ function selectUnit(key) {
   const type = TYPES[key];
   showUnitDetail(key);
   if (!isUnlocked(key)) {
-    toast(`${type.name}尚未解锁，返回主页用 ${UNLOCK_COSTS[key]} 奶币解锁`);
+    toast(`${type.name}尚未解锁，通关第 ${CHARACTER_UNLOCK_LEVELS[key]} 关后解锁`);
     shakeCard(key);
     sound('deny');
     return;
@@ -540,12 +574,17 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
   lastResult = null;
   const waves = levelWaves(level);
   const queue = buildQueue(waves);
+  const startCustard = Math.max(150, progress.custard);
+  if (startCustard > progress.custard) {
+    progress.custard = startCustard;
+    saveProgress();
+  }
   Object.assign(game, {
     state: autostart ? 'running' : 'ready',
     levelIndex: level,
     waves,
     scaling: levelScaling(level),
-    time: 0, custard: 150, speed: 1,
+    time: 0, custard: startCustard, speed: 1,
     plants: [], zombies: [], projectiles: [], enemyProjectiles: [], custards: [], babies: [],
     selected: null, queue, spawned: 0, kills: 0,
     collected: 0, placed: 0, wave: -1, naturalTimer: 5,
@@ -555,13 +594,14 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
   stopBabyPerformances();
   $('babyLayer').innerHTML = '';
   $('effectLayer').innerHTML = '';
+  const upgradeEffects = applyModeAUpgrades();
   for (let row = 0; row < ROWS; row++) {
-    const baby = { row, used: false, element: document.createElement('button') };
+    const baby = { row, usesLeft: upgradeEffects.babyUses, maxUses: upgradeEffects.babyUses, cooldownUntil: 0, element: document.createElement('button') };
     baby.element.className = 'baby-button';
     baby.element.style.left = pctX(62);
     baby.element.style.top = pctY(yForRow(row));
     baby.element.innerHTML = `<img src="assets/baby-glance.png" alt="第 ${row + 1} 行奶娃">`;
-    baby.element.title = '点击让奶娃捧腹大笑：击倒普通僵尸并重创大怪';
+    baby.element.title = `奶娃 (${baby.usesLeft}/${baby.maxUses} 次)`;
     baby.element.addEventListener('click', () => triggerBaby(row, false));
     $('babyLayer').appendChild(baby.element);
     game.babies.push(baby);
@@ -580,8 +620,13 @@ function resetGame(autostart = false, level = progress.selectedLevel) {
 
 function startLevel(level) {
   const target = Math.max(1, Math.floor(Number(level) || 1));
+  if (target > MAX_LEVEL) {
+    toast(`第 ${MAX_LEVEL} 关就是最终关，可以重复挑战`);
+    sound('deny');
+    return;
+  }
   if (target > progress.highestCleared + 1) {
-    toast(`先通关第 ${progress.highestCleared + 1} 关才能继续`);
+    toast(`先通关第 ${nextChallengeLevel()} 关才能继续`);
     sound('deny');
     return;
   }
@@ -615,6 +660,10 @@ function hideHome() {
 }
 
 function leaveToHome() {
+  if (game.state === 'running') {
+    progress.custard = game.custard;
+    saveProgress();
+  }
   resetGame(false);
   sound('select');
   setTimeout(() => {
@@ -623,16 +672,19 @@ function leaveToHome() {
 }
 
 function maxDisplayLevel() {
-  return Math.max(5, progress.highestCleared + 2);
+  return MAX_LEVEL;
+}
+
+function nextChallengeLevel() {
+  return Math.min(MAX_LEVEL, progress.highestCleared + 1);
 }
 
 function renderHome() {
-  $('homeCoins').textContent = progress.coins;
-  $('homeEarned').textContent = progress.totalEarned;
+  $('homeCoins').textContent = progress.custard;
   $('homeCleared').textContent = progress.highestCleared;
   $('homeUnlocked').textContent = progress.unlocked.length;
   $('homeRosterCount').textContent = progress.unlocked.length;
-  $('homeNextLevel').textContent = progress.highestCleared + 1;
+  $('homeNextLevel').textContent = nextChallengeLevel();
   renderLevelTrack();
   renderLevelPreview();
   renderRoster();
@@ -653,7 +705,7 @@ function renderLevelTrack() {
     const current = level === progress.highestCleared + 1;
     const locked = level > progress.highestCleared + 1;
     const selected = level === progress.selectedLevel;
-    const boss = level % 5 === 0;
+    const boss = level === MAX_LEVEL;
     const reward = cleared ? repeatReward(level) : firstClearReward(level);
     const status = cleared
       ? '<span class="node-status"><svg><use href="#i-check"></use></svg>已通关</span>'
@@ -683,7 +735,7 @@ function renderLevelPreview() {
   const level = progress.selectedLevel;
   const firstClear = level === progress.highestCleared + 1;
   const reward = firstClear ? firstClearReward(level) : repeatReward(level);
-  const boss = level % 5 === 0;
+  const boss = level === 12;
   const scaling = levelScaling(level);
   const enemies = enemyTypesForLevel(level)
     .map(type => `<span class="enemy-chip ${type}"><i></i>${ZOMBIES[type].name}</span>`)
@@ -691,9 +743,9 @@ function renderLevelPreview() {
   $('levelPreview').innerHTML = `
     <div class="preview-main">
       <span class="preview-kicker">LEVEL ${level} · ${boss ? 'BOSS 关' : '无尽守护'}</span>
-      <h3>第 ${level} 关<small>五波僵尸</small></h3>
+      <h3>第 ${level} 关<small>${levelWaveCount(level)} 波僵尸</small></h3>
       <div class="preview-tags">
-        <span>${WAVE_COUNT} 波</span>
+        <span>${levelWaveCount(level)} 波</span>
         <span>${difficultyLabel(level)}</span>
         <span>僵尸血量 ×${scaling.hp.toFixed(2)}</span>
         ${boss ? '<span class="boss-tag">僵尸王出没</span>' : ''}
@@ -721,37 +773,14 @@ function renderRoster() {
           <div class="roster-copy"><strong>${type.name}<em>${initial ? '初始' : '已解锁'}</em></strong><span>${type.role}</span></div>
         </article>`;
     }
-    const cost = UNLOCK_COSTS[key];
-    const affordable = progress.coins >= cost;
+    const requiredLevel = CHARACTER_UNLOCK_LEVELS[key];
     return `
       <article class="roster-card locked" title="${type.description}">
         <img src="assets/${key}.png" alt="${type.name}">
         <div class="roster-copy"><strong>${type.name}</strong><span>${type.role}</span></div>
-        <button class="unlock-button" data-unlock="${key}" ${affordable ? '' : 'disabled'} title="${affordable ? `解锁${type.name}` : `还差 ${cost - progress.coins} 奶币`}">
-          <svg><use href="#i-coin"></use></svg>${cost}
-        </button>
+        <span class="unlock-requirement">通关第 ${requiredLevel} 关解锁</span>
       </article>`;
   }).join('');
-}
-
-function unlockUnit(key) {
-  if (!TYPES[key] || isUnlocked(key)) return;
-  const cost = UNLOCK_COSTS[key];
-  if (progress.coins < cost) {
-    toast(`还差 ${cost - progress.coins} 奶币，继续通关吧`);
-    sound('deny');
-    return;
-  }
-  progress.coins -= cost;
-  progress.unlocked.push(key);
-  saveProgress();
-  renderHome();
-  sound('unlock');
-  toast(`已解锁${TYPES[key].name}`);
-  const wallet = document.querySelector('.wallet-card');
-  wallet.classList.remove('bump');
-  void wallet.offsetWidth;
-  wallet.classList.add('bump');
 }
 
 function selectLevel(level) {
@@ -778,14 +807,14 @@ function showResetConfirm() {
   showModal(`
     <span class="modal-kicker">重置进度</span>
     <h2>重新开始无尽守护？</h2>
-    <p>奶币、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
+    <p>奶黄、累计记录、关卡进度与已解锁角色都会清空，无法恢复。</p>
     <div class="result-actions">
       <button class="secondary-button" id="resetCancel">取消</button>
       <button class="danger-button" id="resetConfirm">确认重置</button>
     </div>`, 'compact');
   $('resetCancel').addEventListener('click', hideModal);
   $('resetConfirm').addEventListener('click', () => {
-    progress = defaultProgress();
+    progress = ProgressStore.defaultProgress();
     homeTrackStart = 1;
     saveProgress();
     hideModal();
@@ -1039,6 +1068,15 @@ function updateEnemyProjectiles(dt) {
 
 function damagePlant(plant, amount) {
   if (!game.plants.includes(plant)) return;
+  // Shield absorbs damage first
+  if (plant.shield && plant.shield > 0) {
+    if (plant.shield >= amount) {
+      plant.shield -= amount;
+      return;
+    }
+    amount -= plant.shield;
+    plant.shield = 0;
+  }
   plant.hp -= amount;
   animateEntity('plants', plant.id, 'hurt', 180);
   if (plant.hp <= 0) removePlant(plant);
@@ -1078,7 +1116,8 @@ function updateZombies(dt) {
     if (zombie.dying) continue;
     if (zombie.poisonUntil > game.time && game.time >= zombie.poisonTick) {
       zombie.poisonTick += .5;
-      damageZombie(zombie, 4);
+      const dotMul = applyModeAUpgrades().babyDotMul;
+      damageZombie(zombie, Math.floor(4 * dotMul));
       if (zombie.dying) continue;
     }
     if (zombie.type === 'boss') updateBossSkill(zombie);
@@ -1123,7 +1162,7 @@ function updateZombies(dt) {
       const enraged = zombie.type === 'boss' && zombie.enraged ? 1.45 : 1;
       moveZombie(zombie, zombie.speed * (slowed ? .55 : 1) * enraged * dt);
     }
-    const babyRow = zombieLaneRows(zombie).find(row => game.babies[row] && !game.babies[row].used);
+    const babyRow = zombieLaneRows(zombie).find(row => game.babies[row] && game.babies[row].usesLeft > 0 && game.time >= game.babies[row].cooldownUntil);
     if (zombie.x < 122 && babyRow !== undefined) triggerBaby(babyRow, true);
     if (!zombie.dying && zombie.x < 20 && game.state === 'running') finishGame(false);
   }
@@ -1300,29 +1339,85 @@ function stopBabyPerformances() {
 function triggerBaby(row, automatic) {
   if (game.state !== 'running') return;
   const baby = game.babies[row];
-  if (!baby || baby.used) return;
+  if (!baby || baby.usesLeft <= 0) return;
+
+  const upgradeEffects = applyModeAUpgrades();
+
+  // Check cooldown
+  if (game.time < baby.cooldownUntil) {
+    if (!automatic) toast(`奶娃还在休息，${(baby.cooldownUntil - game.time).toFixed(1)}秒后可用`);
+    return;
+  }
+
   const targets = game.zombies.filter(zombie => !zombie.dying && zombieOccupiesRow(zombie, row));
   if (!targets.length) {
     if (!automatic) toast('这一行暂时没有僵尸，奶娃先保留体力');
     return;
   }
-  baby.used = true;
-  baby.element.classList.add('performing');
-  baby.element.disabled = true;
+
+  baby.usesLeft--;
+
+  // Update baby button state
+  baby.element.title = `奶娃 (${baby.usesLeft}/${baby.maxUses} 次)`;
+  if (baby.usesLeft > 0) {
+    // Set cooldown for next use
+    baby.cooldownUntil = game.time + 10 * upgradeEffects.babyCooldownMul;
+    baby.element.disabled = true;
+    baby.element.classList.add('cooling');
+    // Re-enable after cooldown
+    const cooldownEnd = baby.cooldownUntil;
+    const checkCooldown = () => {
+      if (game.time >= cooldownEnd && baby.usesLeft > 0) {
+        baby.element.disabled = false;
+        baby.element.classList.remove('cooling');
+      }
+    };
+    const intervalId = setInterval(() => {
+      checkCooldown();
+      if (game.time >= cooldownEnd || baby.usesLeft <= 0) clearInterval(intervalId);
+    }, 200);
+  } else {
+    baby.element.classList.add('performing');
+    baby.element.disabled = true;
+  }
+
   startBabyPerformance(row);
+
   const survivors = [];
   targets.forEach(zombie => {
-    const damage = LAUGH_DAMAGE[zombie.type];
-    if (damage) {
+    const baseDamage = LAUGH_DAMAGE[zombie.type];
+    if (baseDamage) {
+      const damage = Math.floor(baseDamage * upgradeEffects.babyDamageMul);
       damageZombie(zombie, damage);
       if (!zombie.dying) {
         survivors.push(zombie);
         spawnEffect(`-${damage}`, zombie.x, zombie.y - 40, 'combat-text damage');
       }
     } else {
-      damageZombie(zombie, zombie.hp + 9999);
+      const damage = Math.floor((zombie.hp + 9999) * upgradeEffects.babyDamageMul);
+      damageZombie(zombie, damage);
     }
   });
+
+  // Apply heal to same-row plants
+  if (upgradeEffects.babyHealPerUse > 0) {
+    game.plants.filter(p => p.row === row).forEach(plant => {
+      const healed = Math.min(plant.maxHp - plant.hp, upgradeEffects.babyHealPerUse);
+      if (healed > 0) {
+        plant.hp += healed;
+        spawnEffect(`+${healed}`, plant.x, plant.y - 25, 'combat-text heal');
+      }
+    });
+  }
+
+  // Apply shield to same-row plants
+  if (upgradeEffects.babyShieldPerUse > 0) {
+    game.plants.filter(p => p.row === row).forEach(plant => {
+      plant.shield = (plant.shield || 0) + upgradeEffects.babyShieldPerUse;
+      spawnEffect(`+${upgradeEffects.babyShieldPerUse}盾`, plant.x, plant.y - 45, 'combat-text heal');
+    });
+  }
+
   const prefix = automatic ? `第 ${row + 1} 行奶娃自动大笑` : `第 ${row + 1} 行奶娃捧腹大笑`;
   if (survivors.length) {
     const names = [...new Set(survivors.map(zombie => ZOMBIES[zombie.type].name))].join('、');
@@ -1344,18 +1439,16 @@ function finishGame(won) {
   const level = game.levelIndex;
   const firstClear = won && level === progress.highestCleared + 1;
   const reward = won ? (firstClear ? firstClearReward(level) : repeatReward(level)) : 0;
-  if (won) {
-    progress.coins += reward;
-    progress.totalEarned += reward;
-    if (firstClear) {
-      progress.highestCleared = level;
-      progress.selectedLevel = level + 1;
-    }
-    saveProgress();
+  progress.custard = game.custard + reward;
+  if (won && firstClear) {
+    progress.highestCleared = level;
+    progress.selectedLevel = Math.min(MAX_LEVEL, level + 1);
+    checkCharacterUnlocks();
   }
+  saveProgress();
   renderHome();
   lastResult = {
-    won, level, reward, firstClear, coins: progress.coins,
+    won, level, reward, firstClear, custard: progress.custard,
     kills: game.kills, collected: game.collected, placed: game.placed
   };
   showResult(lastResult);
@@ -1364,23 +1457,26 @@ function finishGame(won) {
 function showResult(result) {
   if (!result) { showHome(); return; }
   const { won, level, reward, firstClear } = result;
-  const title = won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
-  const copy = won
-    ? firstClear
-      ? `首次通关第 ${level} 关，奶币已经到账，第 ${level + 1} 关正式解锁。`
-      : `再次守住第 ${level} 关，重复挑战获得首通奖励的 30%。`
-    : `第 ${level} 关防守失败。失败不扣奶币，调整阵容再来一次。`;
-  const rewardBox = won
+  const isFinal = won && level === MAX_LEVEL;
+  const title = isFinal ? '全部关卡通关！' : won ? `第 ${level} 关守住啦！` : '僵尸闯进奶家了';
+  const copy = isFinal
+    ? `你守住了全部 ${MAX_LEVEL} 关，包括僵尸王镇守的最终决战。随时可以重复挑战任意关卡刷奶黄。`
+    : won
+      ? firstClear
+        ? `首次通关第 ${level} 关，获得额外奶黄奖励，第 ${level + 1} 关正式解锁。`
+        : `再次守住第 ${level} 关，重复通关获得 30% 额外奖励。`
+      : `第 ${level} 关防守失败，剩余奶黄已保留。调整阵容再来一次。`;
+  const rewardBox = reward > 0
     ? `<div class="result-reward">
         <svg><use href="#i-coin"></use></svg>
-        <div><strong>+${reward}</strong><span>${firstClear ? '首通奖励' : '重复通关 · 30% 奖励'}</span></div>
-        <small>奶币余额 ${result.coins}</small>
+        <div><strong>+${reward}</strong><span>${firstClear ? '首通额外奖励' : '重复通关奖励 · 30%'}</span></div>
+        <small>奶黄余额 ${result.custard}</small>
       </div>`
-    : '<div class="result-reward muted"><span>本局没有奶币奖励 · 失败不扣奶币</span></div>';
+    : `<div class="result-reward muted"><span>剩余奶黄已保留 · 余额 ${result.custard}</span></div>`;
   const actions = won
     ? `<div class="result-actions">
-        <button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>
-        <button class="secondary-button" id="resultRetry">重玩本关</button>
+        ${isFinal ? '' : '<button class="primary-button" id="nextLevelButton">下一关<svg><use href="#i-play"></use></svg></button>'}
+        <button class="${isFinal ? 'primary' : 'secondary'}-button" id="resultRetry">重玩本关</button>
         <button class="ghost-button" id="resultHome">返回主页</button>
       </div>`
     : `<div class="result-actions">
@@ -1439,10 +1535,19 @@ function render() {
   syncCollection('plants', game.plants, plant => {
     const element = document.createElement('div');
     element.className = `entity plant ${plant.type}`;
-    element.innerHTML = `<img src="assets/${plant.type}.png" alt="${TYPES[plant.type].name}"><div class="health-track"><div class="health-fill"></div></div>`;
+    element.innerHTML = `<img src="assets/${plant.type}.png" alt="${TYPES[plant.type].name}"><div class="health-track"><div class="health-fill"></div></div><div class="shield-track" style="display:none"><div class="shield-fill"></div></div>`;
     setEntityPosition(element, plant);
     return element;
-  }, (element, plant) => updateHealth(element, plant));
+  }, (element, plant) => {
+    updateHealth(element, plant);
+    const shieldTrack = element.querySelector('.shield-track');
+    if (plant.shield && plant.shield > 0) {
+      shieldTrack.style.display = '';
+      shieldTrack.querySelector('.shield-fill').style.width = `${Math.min(100, plant.shield / 100 * 100)}%`;
+    } else {
+      shieldTrack.style.display = 'none';
+    }
+  });
 
   syncCollection('zombies', game.zombies, zombie => {
     const element = document.createElement('div');
@@ -1486,7 +1591,7 @@ function render() {
   }, setEntityPosition);
 
   $('custardCount').textContent = game.custard;
-  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${game.waves.length || WAVE_COUNT} 波`;
+  $('waveLabel').textContent = `第 ${Math.max(0, game.wave) + 1} / ${game.waves.length} 波`;
   $('levelProgress').style.width = `${game.kills / game.total * 100}%`;
   $('progressText').textContent = `${game.kills} / ${game.total}`;
   const boss = game.zombies.find(zombie => zombie.type === 'boss' && !zombie.dying);
@@ -1591,7 +1696,7 @@ function requestHome() {
   pauseBabyPerformances();
   updatePauseButton();
   showModal(`
-    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>本局进度不会保留，奶币与通关记录不受影响。</p>
+    <span class="modal-kicker">返回主页</span><h2>离开当前关卡？</h2><p>当前剩余奶黄将带回主页，通关奖励不再发放。</p>
     <div class="result-actions"><button class="secondary-button" id="leaveCancel">继续守护</button><button class="danger-button" id="leaveConfirm">返回主页</button></div>`, 'compact');
   $('leaveCancel').addEventListener('click', resumeGame);
   $('leaveConfirm').addEventListener('click', leaveToHome);
@@ -1621,11 +1726,11 @@ function showHelp() {
   showModal(`
     <span class="modal-kicker">玩法说明</span><h2>守护奶家小院</h2>
     <div class="help-list">
-      <div><strong>关卡与奶币</strong><br>每一关有五波僵尸。首次通关获得全额奶币并解锁下一关；重复挑战旧关卡获得 30% 奶币；失败不扣奶币。</div>
-      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人在主页用奶币解锁，解锁后永久可用。</div>
+      <div><strong>关卡与奶黄</strong><br>每关有多波僵尸（5-10波，随关卡递增）。首次通关获得全额奶黄并解锁下一关；重复挑战旧关卡获得 30% 奶黄；失败不扣奶黄。</div>
+      <div><strong>奶家人解锁</strong><br>初始可用奶蛋、奶蛇、奶牛、奶猴。其他奶家人通过通关对应关卡自动解锁（通关第 2 关解锁奶鼠，第 3 关解锁奶兔，依此类推）。</div>
       <div><strong>收集与放置</strong><br>点击发光的奶黄收集资源。拖动左侧卡牌到空草地即可种植；也可以点击卡牌后点击草地放置。小铲子可移除角色。</div>
-      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。每行只能用一次。</div>
-      <div><strong>僵尸王</strong><br>每 5 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
+      <div><strong>奶娃的最后防线</strong><br>每行奶娃都可点击触发捧腹大笑，击倒本行普通僵尸并重创大块头与僵尸王；僵尸突破时也会自动触发。升级后可多次使用，冷却后恢复。</div>
+      <div><strong>僵尸王</strong><br>第 12 关的最后一波会出现僵尸王。它占据上下两行，两行的奶家人都能攻击它；它也必须吃掉挡路的角色才会继续前进。</div>
       <div><strong>快捷键</strong><br>空格暂停或继续，数字 1 / 2 切换速度，Esc 或鼠标右键取消选择。</div>
     </div>
     <button class="primary-button" id="helpClose">知道了</button>`, 'compact');
@@ -1753,10 +1858,6 @@ $('levelTrack').addEventListener('click', event => {
   const node = event.target.closest('[data-level]');
   if (node) selectLevel(Number(node.dataset.level));
 });
-$('rosterGrid').addEventListener('click', event => {
-  const button = event.target.closest('[data-unlock]');
-  if (button) unlockUnit(button.dataset.unlock);
-});
 $('speedButton').addEventListener('click', () => {
   game.speed = game.speed === 1 ? 2 : 1;
   $('speedButton').textContent = `${game.speed}×`;
@@ -1797,3 +1898,28 @@ initGrid();
 initCards();
 resetGame(false);
 requestAnimationFrame(frame);
+
+window.__nailongTower = {
+  get progress() { return progress; },
+  set progress(value) { progress = value; },
+  game,
+  resetGame,
+  startLevel,
+  finishGame,
+  placeUnit,
+  spawnCustard,
+  collectCustard,
+  checkCharacterUnlocks,
+  levelWaveCount,
+  levelWaveConfig,
+  levelWaves,
+  levelScaling,
+  enemyTypesForLevel,
+  firstClearReward,
+  repeatReward,
+  difficultyLabel,
+  getUpgradeMultiplier,
+  applyModeAUpgrades,
+  isUnlocked,
+  saveProgress
+};

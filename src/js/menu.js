@@ -1,19 +1,25 @@
 (function () {
   const modals = Array.from(document.querySelectorAll('.modal'));
   const bestEls = Array.from(document.querySelectorAll('[data-best-wave]'));
+  const custardEls = Array.from(document.querySelectorAll('[data-custard-balance]'));
 
   function readBest() {
-    try {
-      return JSON.parse(localStorage.getItem('nailong.action.endlessBest') || 'null');
-    } catch {
-      return null;
-    }
+    return ProgressStore.load().endlessBest;
+  }
+
+  function readCustard() {
+    return ProgressStore.load().custard;
   }
 
   function renderBest() {
     const best = readBest();
     const label = best && best.wave ? `最佳：第 ${best.wave} 波` : '暂无记录';
     bestEls.forEach(el => { el.textContent = label; });
+  }
+
+  function renderCustard() {
+    const custard = readCustard();
+    custardEls.forEach(el => { el.textContent = custard; });
   }
 
   function open(id) {
@@ -48,4 +54,5 @@
   });
 
   renderBest();
+  renderCustard();
 })();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#dff2c7">
   <title>奶龙大战僵尸 · 奶家小院</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="home-open">
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg">
@@ -43,16 +43,18 @@
             <p>无尽守护 <span></span> 奶家小院</p>
           </div>
         </div>
-        <div class="wallet-card" aria-label="奶币记录">
+        <div class="wallet-card" aria-label="奶黄记录">
           <div class="wallet-coin"><svg><use href="#i-coin"></use></svg></div>
-          <div class="wallet-balance"><span>奶币余额</span><strong id="homeCoins" aria-live="polite">0</strong></div>
+          <div class="wallet-balance"><span>奶黄余额</span><strong id="homeCoins" aria-live="polite">0</strong></div>
           <div class="wallet-stats">
-            <span>累计获得 <b id="homeEarned">0</b></span>
             <span>已通关 <b id="homeCleared">0</b> 关</span>
             <span>已解锁 <b id="homeUnlocked">4</b> / 13</span>
           </div>
         </div>
-        <button id="resetProgressButton" class="ghost-button" title="清空奶币、解锁与关卡记录">重置进度</button>
+        <div class="home-actions">
+          <a href="index.html" class="ghost-button back-to-menu">返回主菜单</a>
+          <button id="resetProgressButton" class="ghost-button" title="清空奶黄、解锁与关卡记录">重置进度</button>
+        </div>
       </header>
 
       <main class="home-main">
@@ -61,7 +63,7 @@
             <div>
               <span class="eyebrow">ENDLESS GARDEN</span>
               <h2>无尽守护</h2>
-              <p>每关五波，难度逐关上升，每 5 关迎战僵尸王。</p>
+              <p>每关 5–10 波，难度逐关上升，第 12 关迎战僵尸王。</p>
             </div>
             <span class="progress-chip">下一关 <b id="homeNextLevel">1</b></span>
           </div>
@@ -75,9 +77,9 @@
           </div>
           <div id="levelPreview" class="level-preview"></div>
           <div class="home-tips">
-            <span>首通奖励全额奶币</span>
-            <span>重复通关获得 30%</span>
-            <span>失败不扣奶币</span>
+            <span>全局奶黄作为开局资源</span>
+            <span>通关获得额外奖励</span>
+            <span>剩余奶黄自动保留</span>
           </div>
         </section>
 
@@ -90,7 +92,7 @@
             <span class="progress-chip">已解锁 <b id="homeRosterCount">4</b> / 13</span>
           </div>
           <div id="rosterGrid" class="roster-grid"></div>
-          <p class="roster-tip">通关获得奶币，解锁角色永久保留。初始四人始终可用。</p>
+          <p class="roster-tip">通关获得奶黄，解锁角色永久保留。初始四人始终可用。</p>
         </aside>
       </main>
 
@@ -178,6 +180,7 @@
   <div id="modal" class="modal" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="game.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/game.js"></script>
 </body>
 </html>

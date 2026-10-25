@@ -199,6 +199,10 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .baby-button::after { content: "点击大笑"; position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); white-space: nowrap; padding: 2px 5px; border-radius: 6px; font-size: 8px; color: #735f24; background: rgba(255,248,189,.85); opacity: 0; transition: opacity .2s; }
 .baby-button:hover::after { opacity: 1; }
 .baby-button.performing { visibility: hidden; }
+.baby-button.cooling { opacity: 0.5; filter: grayscale(0.5); }
+.baby-button.cooling::after { content: "休息中"; opacity: 1; background: rgba(200,200,180,.85); }
+.shield-track { position: absolute; left: 10%; right: 10%; bottom: -3px; height: 3px; background: rgba(0,0,0,.2); border-radius: 2px; overflow: hidden; }
+.shield-fill { height: 100%; background: linear-gradient(90deg, #7ec8e3, #58a6c7); border-radius: 2px; transition: width .3s; }
 .baby-performance { position: absolute; width: 9%; height: 19%; transform: translate(-50%,-50%); pointer-events: none; background: transparent; }
 .baby-performance canvas { position: absolute; left: 50%; top: 50%; width: auto; height: 100%; transform: translate(-50%,-50%); filter: drop-shadow(0 5px 3px rgba(65,65,30,.25)); }
 .baby-performance video { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -238,7 +242,8 @@ body.is-card-dragging .cell.drop-invalid { cursor: not-allowed; }
 .footer-hints span + span::before { content: ""; position: absolute; left: -8px; top: 4px; width: 2px; height: 2px; border-radius: 50%; background: #9fac92; }
 
 body.home-open { overflow: hidden; }
-body.home-open #app { visibility: hidden; }
+body.home-open #app > .game-layout,
+body.home-open #app > .home-footer { visibility: hidden; pointer-events: none; }
 .home-screen {
   position: fixed; inset: 0; z-index: 80; overflow-x: hidden; overflow-y: auto; padding: 22px 0 28px;
   background:
@@ -253,6 +258,9 @@ body.home-open #app { visibility: hidden; }
 .orb-two { width: 360px; height: 360px; left: -130px; bottom: -150px; background: radial-gradient(circle, rgba(170,211,134,.28), transparent 68%); }
 .home-shell { position: relative; z-index: 1; width: min(1480px, calc(100% - 40px)); margin: 0 auto; }
 .home-header { min-height: 108px; border-radius: 30px; padding: 15px 20px 15px 22px; display: flex; align-items: center; gap: 22px; }
+.home-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.back-to-menu { text-decoration: none; display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border: 1px solid rgba(103,137,88,.22); border-radius: 12px; background: rgba(255,255,255,.56); color: #4a6b42; font-size: 12px; font-weight: 800; transition: .18s; }
+.back-to-menu:hover { background: #fff; color: #2f643d; transform: translateY(-1px); }
 .home-brand { display: flex; align-items: center; gap: 14px; min-width: 330px; }
 .home-brand .brand-badge { width: 76px; height: 76px; border-radius: 24px; }
 .home-brand .brand-badge img { width: 70px; height: 70px; }
@@ -349,10 +357,7 @@ body.home-open #app { visibility: hidden; }
 .roster-card.locked { background: linear-gradient(145deg, #f5f5ef, #e6eae0); border-color: #d8ded3; }
 .roster-card.locked > img { opacity: .36; filter: grayscale(1); }
 .roster-card.locked .roster-copy strong { color: #727e6c; }
-.unlock-button { flex: 0 0 auto; height: 27px; padding: 0 7px; border: 1px solid #e3be58; border-radius: 8px; background: linear-gradient(145deg, #fff3b3, #f2c854); color: #7d5712; display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 900; cursor: pointer; transition: .16s; }
-.unlock-button svg { width: 11px; height: 11px; }
-.unlock-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 9px #ad83283a; }
-.unlock-button:disabled { border-color: #d5dacf; background: #e9ece4; color: #9aa493; cursor: not-allowed; }
+.unlock-requirement { flex: 0 0 auto; font-size: 9px; font-weight: 900; color: #7d5712; background: linear-gradient(145deg, #fff3b3, #f2c854); border-radius: 8px; padding: 3px 8px; white-space: nowrap; }
 .roster-tip { margin: 12px 2px 0; font-size: 9px; line-height: 1.6; color: #8b9880; }
 .home-footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px 8px 0; color: #87957d; font-size: 9px; font-weight: 700; }
 
@@ -430,7 +435,7 @@ body.home-open #app { visibility: hidden; }
   .home-header { flex-wrap: wrap; gap: 12px; }
   .home-brand { min-width: 0; }
   .wallet-card { order: 3; flex: 1 1 100%; margin-left: 0; min-width: 0; }
-  .ghost-button { margin-left: auto; }
+  .home-actions { margin-left: auto; }
   .home-main { grid-template-columns: 1fr; }
   .level-preview { grid-template-columns: 1fr; }
   .preview-action { padding-left: 0; padding-top: 14px; border-left: 0; border-top: 1px dashed #d9e2cb; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#dff2c7">
   <title>奶龙大战僵尸 · 奶家小院</title>
-  <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="css/menu.css">
 </head>
 <body>
   <div class="menu-bg" aria-hidden="true">
@@ -33,7 +33,7 @@
         <span class="mode-tag">冒险模式</span>
         <img src="assets/egg.png" alt="">
         <strong>守住奶家小院</strong>
-        <p>收集奶黄，种植十二生肖，击退五波僵尸。</p>
+        <p>收集奶黄，种植十二生肖，守住 12 关庭院。</p>
         <span class="mode-cta">进入第 1 关</span>
       </a>
 
@@ -41,14 +41,27 @@
         <span class="mode-tag">奶龙战僵尸</span>
         <img src="assets/dragon.png" alt="">
         <strong>亲自上阵</strong>
-        <p>横版格斗闯关，三段关卡与僵尸王；或挑战无尽波次。</p>
+        <p>横版格斗闯关，逐段清怪决战僵尸王；或挑战无尽波次。</p>
         <span class="mode-cta">选择模式</span>
       </button>
+
+      <a class="mode-card upgrade" href="upgrade.html">
+        <span class="mode-tag">强化奶娃</span>
+        <img src="assets/baby-glance.png" alt="">
+        <strong>强化奶娃</strong>
+        <p>使用奶黄提升奶娃能力，强化效果带入所有模式。</p>
+        <span class="mode-cta">进入强化</span>
+      </a>
     </section>
+
+    <div class="custard-banner">
+      <svg width="28" height="28" viewBox="0 0 48 48" style="color:#f5c94c"><path d="M24 4c4 7 13 10 16 19 4 12-4 21-16 21S4 35 8 23C11 14 20 11 24 4Z" fill="currentColor"/><path d="M17 17c3-4 7-5 10-5" fill="none" stroke="#fff9c9" stroke-width="4" stroke-linecap="round" opacity=".85"/></svg>
+      <span>奶黄余额：</span><strong data-custard-balance>--</strong>
+    </div>
 
     <footer class="menu-footer">
       <button class="text-button" type="button" data-open="helpModal">玩法说明</button>
-      <span>v1.1 · 原生 HTML / CSS / JS</span>
+      <span>v1.2 · 原生 HTML / CSS / JS</span>
     </footer>
   </main>
 
@@ -58,9 +71,9 @@
       <span class="eyebrow">奶龙战僵尸</span>
       <h2>选择玩法</h2>
       <div class="mode-options">
-        <a class="mode-option" href="action.html?mode=level">
+        <a class="mode-option" href="action-levels.html">
           <strong>闯关模式</strong>
-          <span>三段关卡 · 精英怪 · 僵尸王</span>
+          <span>12 关闯关 · 精英怪 · 僵尸王</span>
         </a>
         <a class="mode-option" href="action.html?mode=endless">
           <strong>无尽模式</strong>
@@ -68,6 +81,9 @@
         </a>
       </div>
       <small>键盘操作 · A/D 移动 · 空格跳跃 · J/K/L 攻击</small>
+      <div class="custard-display" style="margin-top: 12px; text-align: center;">
+        <span>奶黄余额：</span><strong data-custard-balance>--</strong>
+      </div>
     </div>
   </div>
   <div class="modal" id="helpModal" aria-hidden="true">
@@ -82,12 +98,13 @@
         </section>
         <section>
           <h3>奶龙战僵尸</h3>
-          <p>A/D 移动，空格跳跃，J 普攻三连，K 重击，L 喷火，Shift 冲刺，Esc 暂停。击杀敌人升级并三选一强化；闯关终点是僵尸王，无尽模式波次无限增强。</p>
+          <p>A/D 移动，空格跳跃，J 普攻三连，K 重击，L 音波，Shift 冲刺，Esc 暂停。击杀敌人升级并三选一强化；闯关终点是僵尸王，无尽模式波次无限增强。</p>
         </section>
       </div>
     </div>
   </div>
 
-  <script src="menu.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/menu.js"></script>
 </body>
 </html>
